@@ -266,6 +266,7 @@ a { color: inherit; }
 .file-row-name { min-width: 0; flex: 1; }
 .file-row-name strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
 .file-row-name span { display: block; color: #797a82; font-size: 8px; margin-top: 4px; }
+.file-row-name .public-file-error { color: #e6a1a1; }
 .visibility-chip, .status-chip { display: inline-flex; align-items: center; gap: 4px; border-radius: 4px; font-size: 8px; padding: 5px 7px; text-transform: capitalize; }
 .visibility-chip.public { color: #a6d9ac; background: rgba(101,188,111,.1); }
 .visibility-chip.private { color: #d6d6dc; background: rgba(194,194,204,.1); }

@@ -419,23 +419,25 @@ function PublicFilesFeed({ setError }: { setError: (message: string) => void }) 
   useEffect(() => { void load(); }, [load]);
   useRealtimeRefresh("rgs-public-files-feed", FILE_TABLE, load, undefined, setError);
   const download = async (file: PublicFile) => {
-    if (!supabase) return;
+    if (!supabase) return "Supabase belum dikonfigurasi.";
     const { data, error } = await supabase.storage.from("member-files").createSignedUrl(file.storage_path, 60);
-    if (error) setError(error.message);
-    else window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+    if (error) return error.message;
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+    return null;
   };
   return <>
     <div className="section-heading public-files-heading"><div><span className="eyebrow">SHARED WITH COMMUNITY</span><h2>File publik terbaru</h2></div><span className="member-count">{files.length} file</span></div>
     {loading ? <LoadingLine /> : files.length ? <div className="public-feed-files">{files.map((file) => {
       const joinedProfile = Array.isArray(file.profiles) ? file.profiles[0] : file.profiles;
-      return <PublicFileCard key={file.id} file={file} ownerName={joinedProfile?.nickname ?? "Member"} onDownload={() => void download(file)} setError={setError} />;
+      return <PublicFileCard key={file.id} file={file} ownerName={joinedProfile?.nickname ?? "Member"} onDownload={() => download(file)} />;
     })}</div> : <EmptyState title="Belum ada file publik" body="File yang diunggah ke Storage dengan visibilitas Public akan muncul di sini." />}
   </>;
 }
 
-function PublicFileCard({ file, ownerName, onDownload, setError }: { file: { id: string; name: string; mime_type: string; size_bytes: number; created_at: string; storage_path: string }; ownerName: string; onDownload: () => void; setError: (message: string) => void }) {
+function PublicFileCard({ file, ownerName, onDownload }: { file: { id: string; name: string; mime_type: string; size_bytes: number; created_at: string; storage_path: string }; ownerName: string; onDownload: () => Promise<string | null> }) {
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewFailed, setPreviewFailed] = useState(false);
+  const [fileError, setFileError] = useState("");
   const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
   const kind = file.mime_type.startsWith("image/") ? "image"
     : file.mime_type.startsWith("video/") ? "video"
@@ -447,24 +449,29 @@ function PublicFileCard({ file, ownerName, onDownload, setError }: { file: { id:
     let active = true;
     supabase.storage.from("member-files").createSignedUrl(file.storage_path, 3600).then(({ data, error }) => {
       if (!active) return;
-      if (error) setError(error.message);
+      if (error) setFileError(error.message);
       else setPreviewUrl(data.signedUrl);
     });
     return () => { active = false; };
-  }, [file.storage_path, kind, setError]);
+  }, [file.storage_path, kind]);
   const TypeIcon = kind === "image" ? FileImage : kind === "video" ? Film : kind === "pdf" || kind === "text" ? FileText : kind === "archive" ? FileArchive : File;
   const typeLabel = kind === "pdf" ? "PDF" : kind === "archive" ? extension.toUpperCase() : kind === "text" ? extension.toUpperCase() || "TEXT" : kind === "video" ? "VIDEO" : kind === "image" ? extension.toUpperCase() : "FILE";
+  const missingObject = fileError.toLowerCase().includes("object not found");
+  const handleDownload = async () => {
+    const error = await onDownload();
+    if (error) setFileError(error);
+  };
   return <article className={`public-feed-file ${kind}`}>
     <div className="public-file-preview">
       {kind === "image" && previewUrl && !previewFailed
-        ? <img src={previewUrl} alt={`Pratinjau ${file.name}`} loading="lazy" onError={() => setPreviewFailed(true)} />
+        ? <img src={previewUrl} alt={`Pratinjau ${file.name}`} loading="lazy" onError={() => { setPreviewFailed(true); setFileError("Preview gagal dimuat."); }} />
         : kind === "video" && previewUrl
-          ? <video src={previewUrl} controls preload="metadata" playsInline aria-label={`Pratinjau ${file.name}`} />
+          ? <video src={previewUrl} controls preload="metadata" playsInline aria-label={`Pratinjau ${file.name}`} onError={() => setFileError("Preview gagal dimuat.")} />
           : <><div className={`file-type-icon ${kind}`}><TypeIcon size={20} /></div><span>{typeLabel}</span></>}
     </div>
-    <div className="file-row-name"><strong>{file.name}</strong><span>{typeLabel} · {formatBytes(file.size_bytes)} · {dateLabel(file.created_at)} · oleh {ownerName}</span></div>
+    <div className="file-row-name"><strong>{file.name}</strong><span>{typeLabel} · {formatBytes(file.size_bytes)} · {dateLabel(file.created_at)} · oleh {ownerName}</span>{fileError && <span className="public-file-error">{missingObject ? "Objek file tidak ditemukan. Pemilik perlu mengunggah ulang file melalui Storage." : `File tidak dapat dimuat: ${fileError}`}</span>}</div>
     <span className="visibility-chip public"><Globe2 size={13} />Public</span>
-    <button className="icon-button" title={`Unduh ${file.name}`} aria-label={`Unduh ${file.name}`} onClick={onDownload}><ArrowDownToLine size={17} /></button>
+    <button className="icon-button" title={`Unduh ${file.name}`} aria-label={`Unduh ${file.name}`} onClick={() => void handleDownload()}><ArrowDownToLine size={17} /></button>
   </article>;
 }
 
@@ -546,7 +553,10 @@ function StoragePage({ profile, setError }: { profile: Profile; setError: (messa
   const download = async (path: string) => {
     if (!supabase) return;
     const { data, error } = await supabase.storage.from("member-files").createSignedUrl(path, 60);
-    if (error) setError(error.message); else window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+    if (error) setError(error.message.toLowerCase().includes("object not found")
+      ? "Objek file tidak ditemukan. Hapus entri file yang rusak, lalu unggah ulang file melalui Storage."
+      : error.message);
+    else window.open(data.signedUrl, "_blank", "noopener,noreferrer");
   };
   const toggleVisibility = async (file: StoredFile) => {
     if (!supabase || file.owner_id !== profile.id || visibilityBusyId) return;

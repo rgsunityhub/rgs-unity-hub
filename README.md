@@ -180,6 +180,7 @@ Kuota dapat berubah dan penggunaan berlebih dapat membatasi layanan atau menimbu
 - **Email belum terverifikasi:** selesaikan verifikasi; pastikan SMTP/Auth email dan Redirect URLs Supabase dikonfigurasi. Untuk uji lokal, gunakan mode email confirmation sesuai pengaturan project.
 - **Login nickname tidak bekerja:** pastikan Edge Function ter-deploy dengan nama `login-with-nickname`, project ref benar, dan function logs tidak menunjukkan konfigurasi env/error.
 - **Upload ditolak:** periksa batas 25 MB di UI dan bucket, MIME type, serta Storage policies/schema sudah diterapkan.
+- **File publik tercatat tetapi pratinjau/unduh menyebut objek tidak ditemukan:** metadata tidak dapat memulihkan isi file yang sudah hilang dari bucket. Pemilik perlu menghapus entri lama dari Storage, lalu mengunggah kembali file sumber; Beranda/Dashboard menampilkan instruksi ini tanpa toast berulang.
 - **Chat kosong atau tidak realtime:** cek tabel `chat_messages` masuk publication `supabase_realtime`, Realtime aktif, dan user authenticated.
 - **Build lokal:** `npm run build`. Untuk melihat hasil production lokal: `npm run preview`.
 
