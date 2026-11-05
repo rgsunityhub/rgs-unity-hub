@@ -107,7 +107,7 @@ Ganti kode contoh dengan nilai unik, jangan gunakan ulang. SQL Editor berjalan d
 - Database memvalidasi format nickname dan mengonsumsi invite secara atomik dalam trigger signup; kode nonaktif, kedaluwarsa, atau habis pakai gagal.
 - Login menerima nickname dan password. Edge Function mencari akun di server, lalu menyerahkan verifikasi password ke Supabase Auth; respons kesalahan tidak membedakan akun tidak ditemukan dari password salah.
 - Rate limit login dibatasi di database per hash alamat jaringan + nickname.
-- Role default selalu `user`; metadata signup tidak dapat memilih role. Hanya owner dapat mengubah role lewat database, admin/user tidak dapat menaikkan role sendiri.
+- Role default selalu `user`; metadata signup tidak dapat memilih role. Hanya owner dapat mengubah role member lain; perubahan role akun sendiri diblokir di UI dan database untuk mencegah owner terkunci dari aksesnya.
 - Admin dapat membuat invite dan melihat daftar member. Owner dapat mengaktifkan/nonaktifkan kode. Owner adalah satu-satunya yang dapat mengubah role.
 - Permintaan reset password pada halaman login menggunakan tautan recovery Supabase Auth yang dikirim ke email. Jangan minta atau menampilkan password lama.
 

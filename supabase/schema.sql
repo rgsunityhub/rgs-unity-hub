@@ -195,6 +195,9 @@ begin
   if new.id <> old.id or new.created_at <> old.created_at then
     raise exception 'Profile identity fields cannot be changed';
   end if;
+  if new.role is distinct from old.role and auth.uid() = old.id then
+    raise exception 'Owners cannot change their own role';
+  end if;
   if new.role is distinct from old.role and (auth.uid() is not null and not public.is_owner()) then
     raise exception 'Only the owner can change member roles';
   end if;
