@@ -436,6 +436,7 @@ function StoragePage({ profile, setError }: { profile: Profile; setError: (messa
   const [files, setFiles] = useState<StoredFile[]>([]);
   const [sharedFiles, setSharedFiles] = useState<StoredFile[]>([]);
   const [busy, setBusy] = useState(false);
+  const [visibilityBusyId, setVisibilityBusyId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const load = useCallback(async () => {
     if (!supabase) return;
@@ -456,13 +457,13 @@ function StoragePage({ profile, setError }: { profile: Profile; setError: (messa
     if (file.size > 25 * 1024 * 1024) { setError("Ukuran file maksimal 25 MB."); return; }
     const allowedTypes = ["image/png", "image/jpeg", "image/gif", "image/webp", "video/mp4", "video/webm", "application/pdf", "text/plain", "application/zip"];
     if (!allowedTypes.includes(file.type)) { setError("Tipe file tidak didukung. Gunakan gambar, MP4/WebM, PDF, TXT, atau ZIP."); return; }
-    setBusy(true);
     const selectedVisibility = new FormData(form).get("visibility");
     if (selectedVisibility !== "public" && selectedVisibility !== "private") {
       setError("Pilih visibilitas file Public atau Private.");
       return;
     }
     const visibility = selectedVisibility;
+    setBusy(true);
     const storagePath = `${profile.id}/${crypto.randomUUID()}-${file.name.replace(/[^\w.-]/g, "_")}`;
     const { error: uploadError } = await supabase.storage.from("member-files").upload(storagePath, file, { upsert: false });
     if (uploadError) { setError(uploadError.message); setBusy(false); return; }
@@ -477,6 +478,15 @@ function StoragePage({ profile, setError }: { profile: Profile; setError: (messa
     if (!supabase) return;
     const { data, error } = await supabase.storage.from("member-files").createSignedUrl(path, 60);
     if (error) setError(error.message); else window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  };
+  const toggleVisibility = async (file: StoredFile) => {
+    if (!supabase || file.owner_id !== profile.id || visibilityBusyId) return;
+    const nextVisibility = file.visibility === "public" ? "private" : "public";
+    setVisibilityBusyId(file.id);
+    const { error } = await supabase.from("files").update({ visibility: nextVisibility }).eq("id", file.id).eq("owner_id", profile.id);
+    if (error) setError(error.message);
+    else await load();
+    setVisibilityBusyId(null);
   };
   const remove = async (file: (typeof files)[number]) => {
     if (!supabase || !window.confirm(`Hapus ${file.name}?`)) return;
@@ -493,10 +503,10 @@ function StoragePage({ profile, setError }: { profile: Profile; setError: (messa
     <div className="storage-summary"><div className="storage-summary-icon"><Folder size={21} /></div><div><span>Storage pribadi</span><strong>{formatBytes(used)} <small>digunakan</small></strong></div><div className="storage-progress"><i style={{ width: `${Math.min(used / (1024 * 1024 * 1024) * 100, 100)}%` }} /></div><small>Batas upload per file: 25 MB</small></div>
     <form className="upload-panel" onSubmit={upload}><div className="upload-icon"><Upload size={19} /></div><div className="upload-copy"><strong>Upload file baru</strong><span>Public dapat dilihat dan diunduh anggota; Private hanya terlihat oleh kamu.</span></div><select className="filter-select" name="visibility" defaultValue="private" disabled={busy}><option value="private">Private</option><option value="public">Public</option></select><label className="button button-primary upload-button"><Upload size={16} />{busy ? "Mengunggah..." : "Pilih file"}<input name="upload" type="file" accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm,application/pdf,text/plain,application/zip" required disabled={busy} /></label><button className="button button-outline" disabled={busy}>Upload</button></form>
     <div className="members-toolbar storage-toolbar"><label className="search-box"><Search size={16} /><input placeholder="Cari file..." value={query} onChange={(event) => setQuery(event.target.value)} /></label><span className="member-count">{files.length} file</span></div>
-    <div className="file-list">{filtered.map((file) => <div className="file-row" key={file.id}><div className="file-type-icon"><File size={18} /></div><div className="file-row-name"><strong>{file.name}</strong><span>{formatBytes(file.size_bytes)} · {dateLabel(file.created_at)}</span></div><span className={`visibility-chip ${file.visibility}`}>{file.visibility === "public" ? <Globe2 size={13} /> : <LockKeyhole size={13} />}{file.visibility}</span><div className="file-actions"><button className="icon-button" title="Unduh" onClick={() => void download(file.storage_path)}><ArrowDownToLine size={17} /></button><button className="icon-button" title="Hapus" onClick={() => void remove(file)}><X size={17} /></button></div></div>)}</div>
+    <div className="file-list">{filtered.map((file) => <div className="file-row" key={file.id}><div className="file-type-icon"><File size={18} /></div><div className="file-row-name"><strong>{file.name}</strong><span>{formatBytes(file.size_bytes)} · {dateLabel(file.created_at)}</span></div><button className={`visibility-chip ${file.visibility} visibility-toggle`} disabled={visibilityBusyId === file.id} onClick={() => void toggleVisibility(file)} title={`Ubah menjadi ${file.visibility === "public" ? "Private" : "Public"}`} aria-label={`${file.name}: ${file.visibility}. Ubah menjadi ${file.visibility === "public" ? "Private" : "Public"}`}>{file.visibility === "public" ? <Globe2 size={13} /> : <LockKeyhole size={13} />}{visibilityBusyId === file.id ? "Menyimpan..." : file.visibility}</button><div className="file-actions"><button className="icon-button" title="Unduh" onClick={() => void download(file.storage_path)}><ArrowDownToLine size={17} /></button><button className="icon-button" title="Hapus" onClick={() => void remove(file)}><X size={17} /></button></div></div>)}</div>
     {!filtered.length && <EmptyState title="Belum ada file" body="Upload file pertamamu untuk mulai menggunakan storage." />}
     <div className="section-heading"><div><span className="eyebrow">SHARED WITH COMMUNITY</span><h2>File publik</h2></div><span className="member-count">{sharedFiles.length} file</span></div>
-    <div className="file-list">{sharedFiles.filter((file) => file.name.toLowerCase().includes(query.toLowerCase())).map((file) => { const joinedProfile = Array.isArray(file.profiles) ? file.profiles[0] : file.profiles; return <div className="file-row" key={file.id}><div className="file-type-icon"><File size={18} /></div><div className="file-row-name"><strong>{file.name}</strong><span>{formatBytes(file.size_bytes)} · {dateLabel(file.created_at)} · oleh {joinedProfile?.nickname ?? "Member"}</span></div><span className="visibility-chip public"><Globe2 size={13} />Public</span><div className="file-actions"><button className="icon-button" title={`Unduh ${file.name}`} onClick={() => void download(file.storage_path)}><ArrowDownToLine size={17} /></button></div></div>; })}</div>
+    <div className="file-list">{sharedFiles.filter((file) => file.name.toLowerCase().includes(query.toLowerCase())).map((file) => { const joinedProfile = Array.isArray(file.profiles) ? file.profiles[0] : file.profiles; return <div className="file-row" key={file.id}><div className="file-type-icon"><File size={18} /></div><div className="file-row-name"><strong>{file.name}</strong><span>{formatBytes(file.size_bytes)} · {dateLabel(file.created_at)} · oleh {joinedProfile?.nickname ?? "Member"}</span></div>{file.owner_id === profile.id ? <button className="visibility-chip public visibility-toggle" disabled={visibilityBusyId === file.id} onClick={() => void toggleVisibility(file)} title="Ubah menjadi Private" aria-label={`${file.name}: Public. Ubah menjadi Private`}><Globe2 size={13} />{visibilityBusyId === file.id ? "Menyimpan..." : "Public"}</button> : <span className="visibility-chip public"><Globe2 size={13} />Public</span>}<div className="file-actions"><button className="icon-button" title={`Unduh ${file.name}`} onClick={() => void download(file.storage_path)}><ArrowDownToLine size={17} /></button></div></div>; })}</div>
     {!sharedFiles.some((file) => file.name.toLowerCase().includes(query.toLowerCase())) && <EmptyState title="Belum ada file publik" body="File yang diunggah dengan visibilitas Public akan muncul di sini." />}
   </>;
 }

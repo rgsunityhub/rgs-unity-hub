@@ -258,6 +258,9 @@ a { color: inherit; }
 .visibility-chip, .status-chip { display: inline-flex; align-items: center; gap: 4px; border-radius: 4px; font-size: 8px; padding: 5px 7px; text-transform: capitalize; }
 .visibility-chip.public { color: #a6d9ac; background: rgba(101,188,111,.1); }
 .visibility-chip.private { color: #d6d6dc; background: rgba(194,194,204,.1); }
+.visibility-toggle { border: 0; cursor: pointer; }
+.visibility-toggle:hover:not(:disabled) { filter: brightness(1.25); }
+.visibility-toggle:disabled { cursor: wait; opacity: .7; }
 .file-actions { display: flex; gap: 1px; }
 
 .youtube-add { border: 1px solid #292a30; border-radius: 8px; background: #111216; padding: 16px; }
