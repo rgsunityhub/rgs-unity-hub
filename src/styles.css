@@ -132,6 +132,10 @@ a { color: inherit; }
 .search-box input { width: 175px; min-width: 0; color: #e7e7eb; outline: none; border: 0; background: transparent; font-size: 10px; }
 .search-box input::placeholder { color: #696a73; }
 .feed-list { display: flex; flex-direction: column; gap: 11px; }
+.public-files-heading { margin-top: 30px; }
+.public-feed-files { display: flex; flex-direction: column; gap: 8px; }
+.public-feed-file { min-height: 60px; display: flex; align-items: center; gap: 11px; padding: 9px 13px; border: 1px solid #292a30; border-radius: 7px; background: #111216; }
+.public-feed-file .file-row-name { flex: 1; }
 .post-card { padding: 16px 18px 0; border: 1px solid #292a30; border-radius: 8px; background: #111216; transition: border-color .18s; }
 .post-card:hover { border-color: #3b3c43; }
 .post-header { display: flex; align-items: center; gap: 10px; }

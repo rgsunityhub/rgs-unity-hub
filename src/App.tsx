@@ -331,6 +331,7 @@ function HomePage({ profile, setError }: { profile: Profile; setError: (message:
     {compose && <form className="compose-card" onSubmit={publish}><Field label="Judul publikasi" name="title" placeholder="Apa yang ingin kamu bagikan?" maxLength={100} required /><label className="field"><span>Cerita kamu</span><textarea name="body" placeholder="Tulis sesuatu untuk komunitas..." maxLength={2000} rows={3} required /></label><div className="compose-footer"><span><Globe2 size={14} /> Publik — terlihat oleh semua member</span><button className="button button-primary"><Send size={15} /> Publikasikan</button></div></form>}
     <div className="feed-toolbar"><div className="feed-tabs"><button className="active">Terbaru</button></div><label className="search-box"><Search size={16} /><input placeholder="Cari publikasi..." value={search} onChange={(event) => setSearch(event.target.value)} /></label></div>
     <section className="feed-list">{loading ? <LoadingLine /> : filtered.length ? filtered.map((post) => <PublicationCard key={post.id} post={post} profileId={profile.id} onDelete={load} setError={setError} />) : <EmptyState title="Belum ada publikasi" body="Jadilah yang pertama membagikan kabar ke komunitas RGS." />}</section>
+    <PublicFilesFeed setError={setError} />
     <div className="feed-footer">Menampilkan publikasi publik komunitas <span>RGS UNITY HUB</span></div>
   </>;
 }
@@ -396,6 +397,39 @@ function DashboardPage({ profile, setError }: { profile: Profile; setError: (mes
     <section className="stats-grid">{stats.map(({ label, value, icon: Icon, tone, note }) => <div className="stat-card" key={label}><div className={`stat-icon ${tone}`}><Icon size={18} /></div><span className="stat-label">{label}</span><strong>{value.toLocaleString("id-ID")}</strong><small>{note}</small></div>)}</section>
     <div className="section-heading"><div><span className="eyebrow">COMMUNITY PULSE</span><h2>Aktivitas terbaru</h2></div><span className="live-tag"><i /> LIVE FEED</span></div>
     <div className="feed-list">{recent.length ? recent.map((post) => <PublicationCard key={post.id} post={post} profileId={profile.id} onDelete={load} setError={setError} />) : <EmptyState title="Ruang masih tenang" body="Publikasi terbaru akan muncul di sini." />}</div>
+    <PublicFilesFeed setError={setError} />
+  </>;
+}
+
+function PublicFilesFeed({ setError }: { setError: (message: string) => void }) {
+  type PublicFile = { id: string; owner_id: string; name: string; size_bytes: number; created_at: string; storage_path: string; profiles?: { nickname: string } | { nickname: string }[] | null };
+  const [files, setFiles] = useState<PublicFile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const load = useCallback(async () => {
+    if (!supabase) return;
+    const { data, error } = await supabase.from("files")
+      .select("id, owner_id, name, size_bytes, created_at, storage_path, profiles!files_owner_id_fkey(nickname)")
+      .eq("visibility", "public")
+      .order("created_at", { ascending: false })
+      .limit(6);
+    if (error) setError(error.message);
+    else setFiles((data ?? []) as PublicFile[]);
+    setLoading(false);
+  }, [setError]);
+  useEffect(() => { void load(); }, [load]);
+  useRealtimeRefresh("rgs-public-files-feed", FILE_TABLE, load, undefined, setError);
+  const download = async (file: PublicFile) => {
+    if (!supabase) return;
+    const { data, error } = await supabase.storage.from("member-files").createSignedUrl(file.storage_path, 60);
+    if (error) setError(error.message);
+    else window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  };
+  return <>
+    <div className="section-heading public-files-heading"><div><span className="eyebrow">SHARED WITH COMMUNITY</span><h2>File publik terbaru</h2></div><span className="member-count">{files.length} file</span></div>
+    {loading ? <LoadingLine /> : files.length ? <div className="public-feed-files">{files.map((file) => {
+      const joinedProfile = Array.isArray(file.profiles) ? file.profiles[0] : file.profiles;
+      return <article className="public-feed-file" key={file.id}><div className="file-type-icon"><File size={18} /></div><div className="file-row-name"><strong>{file.name}</strong><span>{formatBytes(file.size_bytes)} · {dateLabel(file.created_at)} · oleh {joinedProfile?.nickname ?? "Member"}</span></div><span className="visibility-chip public"><Globe2 size={13} />Public</span><button className="icon-button" title={`Unduh ${file.name}`} aria-label={`Unduh ${file.name}`} onClick={() => void download(file)}><ArrowDownToLine size={17} /></button></article>;
+    })}</div> : <EmptyState title="Belum ada file publik" body="File yang diunggah ke Storage dengan visibilitas Public akan muncul di sini." />}
   </>;
 }
 
