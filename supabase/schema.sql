@@ -402,11 +402,24 @@ grant select, update on public.notifications to authenticated;
 grant select, insert, update on public.password_reset_requests to authenticated;
 
 do $$
+declare
+  table_name text;
 begin
-  if not exists (
-    select 1 from pg_publication_tables
-    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'chat_messages'
-  ) then
-    alter publication supabase_realtime add table public.chat_messages;
-  end if;
+  foreach table_name in array array[
+    'profiles',
+    'publications',
+    'publication_reactions',
+    'publication_comments',
+    'files',
+    'invite_codes',
+    'notifications',
+    'chat_messages'
+  ] loop
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = table_name
+    ) then
+      execute format('alter publication supabase_realtime add table public.%I', table_name);
+    end if;
+  end loop;
 end $$;

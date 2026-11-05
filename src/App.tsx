@@ -46,6 +46,33 @@ function normalizePublications(rows: unknown): Publication[] {
   });
 }
 
+function useRealtimeRefresh(channelName: string, tables: readonly string[], refresh: () => void | Promise<void>, filter?: string, setError?: (message: string) => void) {
+  useEffect(() => {
+    if (!supabase) return;
+    let channel = supabase.channel(channelName);
+    for (const table of tables) {
+      channel = channel.on("postgres_changes", { event: "*", schema: "public", table, ...(filter ? { filter } : {}) }, () => {
+        void refresh();
+      });
+    }
+    channel.subscribe((status, error) => {
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        setError?.(error?.message ?? `Realtime channel ${channelName} failed: ${status}`);
+      }
+    });
+    return () => { void supabase?.removeChannel(channel); };
+  }, [channelName, filter, refresh, setError, tables]);
+}
+
+const PROFILE_TABLE = ["profiles"] as const;
+const HOME_TABLES = ["publications", "profiles"] as const;
+const DASHBOARD_TABLES = ["profiles", "publications", "files", "invite_codes"] as const;
+const INVITE_TABLE = ["invite_codes"] as const;
+const FILE_TABLE = ["files"] as const;
+const PUBLICATION_TABLE = ["publications", "profiles"] as const;
+const NOTIFICATION_TABLE = ["notifications"] as const;
+const ENGAGEMENT_TABLES = ["publication_reactions", "publication_comments"] as const;
+
 function App() {
   const [session, setSession] = useState<Awaited<ReturnType<NonNullable<typeof supabase>["auth"]["getSession"]>>["data"]["session"]>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -71,16 +98,14 @@ function App() {
     return () => { active = false; listener.subscription.unsubscribe(); };
   }, []);
 
-  useEffect(() => {
+  const refreshOwnProfile = useCallback(async () => {
     if (!session?.user || !supabase) return;
-    let active = true;
-    supabase.from("profiles").select("*").eq("id", session.user.id).single().then(({ data, error: queryError }) => {
-      if (!active) return;
-      if (queryError) setError(queryError.message);
-      else setProfile(data as Profile);
-    });
-    return () => { active = false; };
-  }, [session]);
+    const { data, error: queryError } = await supabase.from("profiles").select("*").eq("id", session.user.id).single();
+    if (queryError) setError(queryError.message);
+    else setProfile(data as Profile);
+  }, [session?.user?.id]);
+  useEffect(() => { void refreshOwnProfile(); }, [refreshOwnProfile]);
+  useRealtimeRefresh("rgs-own-profile", PROFILE_TABLE, refreshOwnProfile, session?.user?.id ? `id=eq.${session.user.id}` : undefined, setError);
 
   const signOut = async () => {
     if (!supabase) return;
@@ -252,7 +277,7 @@ function PageContent({ page, profile, setProfile, setError }: { page: Page; prof
     case "chat": return <ChatPage profile={profile} setError={setError} />;
     case "profile": return <ProfilePage profile={profile} setProfile={setProfile} setError={setError} />;
     case "invites": return <InvitesPage profile={profile} setError={setError} />;
-    case "notifications": return <NotificationsPage />;
+    case "notifications": return <NotificationsPage setError={setError} />;
     case "settings": return <SettingsPage />;
     default: return <HomePage profile={profile} setError={setError} />;
   }
@@ -270,6 +295,7 @@ function HomePage({ profile, setError }: { profile: Profile; setError: (message:
     setLoading(false);
   }, [setError]);
   useEffect(() => { void load(); }, [load]);
+  useRealtimeRefresh("rgs-home-feed", HOME_TABLES, load, undefined, setError);
   const filtered = posts.filter((post) => `${post.title} ${post.body} ${post.profiles?.nickname}`.toLowerCase().includes(search.toLowerCase()));
   const publish = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -291,10 +317,9 @@ function HomePage({ profile, setError }: { profile: Profile; setError: (message:
 function DashboardPage({ profile, setError }: { profile: Profile; setError: (message: string) => void }) {
   const [counts, setCounts] = useState({ members: 0, admins: 0, users: 0, posts: 0, files: 0, publicFiles: 0, privateFiles: 0, storageBytes: 0, invites: 0, inviteUses: 0, myPosts: 0 });
   const [recent, setRecent] = useState<Publication[]>([]);
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!supabase) return;
-    let active = true;
-    Promise.all([
+    const [members, admins, users, posts, files, myPosts, invites, feed] = await Promise.all([
       supabase.from("profiles").select("id", { count: "exact", head: true }),
       supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "admin"),
       supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "user"),
@@ -303,29 +328,28 @@ function DashboardPage({ profile, setError }: { profile: Profile; setError: (mes
       supabase.from("publications").select("id", { count: "exact", head: true }).eq("owner_id", profile.id),
       supabase.from("invite_codes").select("max_uses, used_count"),
       supabase.from("publications").select("*, profiles!publications_owner_id_fkey(nickname, avatar_url, role)").eq("visibility", "public").order("created_at", { ascending: false }).limit(4),
-    ]).then(([members, admins, users, posts, files, myPosts, invites, feed]) => {
-      if (!active) return;
-      const fileRows = files.data ?? [];
-      const inviteRows = invites.data ?? [];
-      const queryError = [members.error, admins.error, users.error, posts.error, files.error, myPosts.error, invites.error, feed.error].find(Boolean);
-      if (queryError) setError(queryError.message);
-      setCounts({
-        members: members.count ?? 0,
-        admins: admins.count ?? 0,
-        users: users.count ?? 0,
-        posts: posts.count ?? 0,
-        files: fileRows.length,
-        publicFiles: fileRows.filter((file) => file.visibility === "public").length,
-        privateFiles: fileRows.filter((file) => file.visibility === "private").length,
-        storageBytes: fileRows.reduce((total, file) => total + Number(file.size_bytes), 0),
-        invites: inviteRows.length,
-        inviteUses: inviteRows.reduce((total, invite) => total + invite.used_count, 0),
-        myPosts: myPosts.count ?? 0,
-      });
-      setRecent(normalizePublications(feed.data));
+    ]);
+    const fileRows = files.data ?? [];
+    const inviteRows = invites.data ?? [];
+    const queryError = [members.error, admins.error, users.error, posts.error, files.error, myPosts.error, invites.error, feed.error].find(Boolean);
+    if (queryError) setError(queryError.message);
+    setCounts({
+      members: members.count ?? 0,
+      admins: admins.count ?? 0,
+      users: users.count ?? 0,
+      posts: posts.count ?? 0,
+      files: fileRows.length,
+      publicFiles: fileRows.filter((file) => file.visibility === "public").length,
+      privateFiles: fileRows.filter((file) => file.visibility === "private").length,
+      storageBytes: fileRows.reduce((total, file) => total + Number(file.size_bytes), 0),
+      invites: inviteRows.length,
+      inviteUses: inviteRows.reduce((total, invite) => total + invite.used_count, 0),
+      myPosts: myPosts.count ?? 0,
     });
-    return () => { active = false; };
+    setRecent(normalizePublications(feed.data));
   }, [profile.id, setError]);
+  useEffect(() => { void load(); }, [load]);
+  useRealtimeRefresh("rgs-dashboard", DASHBOARD_TABLES, load, undefined, setError);
   const stats = profile.role === "owner"
     ? [
       { label: "Total member", value: counts.members, icon: Users, tone: "purple", note: "Semua anggota" },
@@ -359,12 +383,13 @@ function MembersPage({ profile, setError }: { profile: Profile; setError: (messa
   const [selected, setSelected] = useState<Profile | null>(null);
   const [query, setQuery] = useState("");
   const [role, setRole] = useState("all");
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!supabase) return;
-    supabase.from("profiles").select("*").order("created_at", { ascending: false }).then(({ data, error: queryError }) => {
-      if (queryError) setError(queryError.message); else setMembers((data ?? []) as Profile[]);
-    });
+    const { data, error: queryError } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
+    if (queryError) setError(queryError.message); else setMembers((data ?? []) as Profile[]);
   }, [setError]);
+  useEffect(() => { void load(); }, [load]);
+  useRealtimeRefresh("rgs-members", PROFILE_TABLE, load, undefined, setError);
   const updateRole = async (member: Profile, nextRole: Role) => {
     if (!supabase) return;
     const { data, error } = await supabase.from("profiles").update({ role: nextRole }).eq("id", member.id).select("*").single();
@@ -395,6 +420,7 @@ function StoragePage({ profile, setError }: { profile: Profile; setError: (messa
     if (error) setError(error.message); else setFiles(data ?? []);
   }, [profile.id, setError]);
   useEffect(() => { void load(); }, [load]);
+  useRealtimeRefresh("rgs-storage", FILE_TABLE, load, undefined, setError);
   const upload = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = event.currentTarget;
@@ -452,6 +478,7 @@ function YouTubePage({ profile, setError }: { profile: Profile; setError: (messa
     if (error) setError(error.message); else setVideos(normalizePublications(data));
   }, [setError]);
   useEffect(() => { void load(); }, [load]);
+  useRealtimeRefresh("rgs-youtube", PUBLICATION_TABLE, load, undefined, setError);
   const getVideoId = (value: string) => {
     try {
       const parsed = new URL(value);
@@ -520,10 +547,13 @@ function ProfilePage({ profile, setProfile, setError }: { profile: Profile; setP
   const [bio, setBio] = useState(profile.bio ?? "");
   const [saving, setSaving] = useState(false);
   const [publications, setPublications] = useState(0);
-  useEffect(() => {
+  const loadPublicationCount = useCallback(async () => {
     if (!supabase) return;
-    supabase.from("publications").select("id", { count: "exact", head: true }).eq("owner_id", profile.id).then(({ count }) => setPublications(count ?? 0));
-  }, [profile.id]);
+    const { count, error } = await supabase.from("publications").select("id", { count: "exact", head: true }).eq("owner_id", profile.id);
+    if (error) setError(error.message); else setPublications(count ?? 0);
+  }, [profile.id, setError]);
+  useEffect(() => { void loadPublicationCount(); }, [loadPublicationCount]);
+  useRealtimeRefresh("rgs-profile-publications", PUBLICATION_TABLE, loadPublicationCount, undefined, setError);
   const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault(); if (!supabase) return;
     setSaving(true);
@@ -558,6 +588,7 @@ function InvitesPage({ profile, setError }: { profile: Profile; setError: (messa
     if (error) setError(error.message); else setInvites(data ?? []);
   }, [setError]);
   useEffect(() => { void load(); }, [load]);
+  useRealtimeRefresh("rgs-invites", INVITE_TABLE, load, undefined, setError);
   const create = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault(); if (!supabase) return;
     const { data, error } = await supabase.rpc("create_invite_code", { p_max_uses: Number(maxUses) });
@@ -583,12 +614,15 @@ function InvitesPage({ profile, setError }: { profile: Profile; setError: (messa
   </>;
 }
 
-function NotificationsPage() {
+function NotificationsPage({ setError }: { setError: (message: string) => void }) {
   const [notifications, setNotifications] = useState<Array<{ id: string; title: string; body: string; created_at: string; read_at: string | null }>>([]);
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!supabase) return;
-    supabase.from("notifications").select("id, title, body, created_at, read_at").order("created_at", { ascending: false }).limit(50).then(({ data }) => setNotifications(data ?? []));
-  }, []);
+    const { data, error } = await supabase.from("notifications").select("id, title, body, created_at, read_at").order("created_at", { ascending: false }).limit(50);
+    if (error) setError(error.message); else setNotifications(data ?? []);
+  }, [setError]);
+  useEffect(() => { void load(); }, [load]);
+  useRealtimeRefresh("rgs-notifications", NOTIFICATION_TABLE, load, undefined, setError);
   const markRead = async (id: string) => {
     if (!supabase) return;
     const { error } = await supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", id);
@@ -635,7 +669,7 @@ function PublicationCard({ post, profileId, setError }: { post: Publication; pro
 
   useEffect(() => { void refreshCounts(); }, [refreshCounts]);
 
-  const loadComments = async () => {
+  const loadComments = useCallback(async () => {
     if (!supabase) return;
     const { data, error } = await supabase.from("publication_comments").select("id, body, created_at, profiles(nickname)").eq("publication_id", post.id).order("created_at", { ascending: true }).limit(50);
     if (error) { setError(error.message); return; }
@@ -648,7 +682,12 @@ function PublicationCard({ post, profileId, setError }: { post: Publication; pro
     });
     setComments(normalized);
     setCommentCount(normalized.length);
-  };
+  }, [post.id, setError]);
+  const refreshEngagement = useCallback(async () => {
+    await refreshCounts();
+    if (commentsOpen) await loadComments();
+  }, [commentsOpen, loadComments, refreshCounts]);
+  useRealtimeRefresh(`rgs-engagement-${post.id}`, ENGAGEMENT_TABLES, refreshEngagement, `publication_id=eq.${post.id}`, setError);
 
   const toggleLike = async () => {
     if (!supabase) return;
