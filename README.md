@@ -132,7 +132,7 @@ Semua key project selain publishable/anon harus tetap berada di server. RLS adal
 - Menu opsi publikasi di Beranda untuk menyalin tautan; pemilik publikasi dapat menghapus publikasinya sendiri sesuai kebijakan RLS.
 - Profil sendiri (bio/avatar), daftar dan pencarian member.
 - Upload/download/hapus file milik sendiri, ubah visibilitas Public/Private melalui badge pada daftar file, daftar file Public bersama yang bisa diunduh anggota, validasi MIME yang diizinkan serta batas 25 MB per file. File Private hanya terlihat oleh pemiliknya.
-- File Storage berstatus Public otomatis muncul di bagian "File publik terbaru" pada Beranda dan Dashboard, tersinkron melalui Supabase Realtime; gambar/video menyesuaikan ukuran kotak preview tanpa memotong konten, dan PDF, arsip, teks, serta file lain memakai ikon/tipe khusus. File Private tidak ditampilkan.
+- File Storage berstatus Public otomatis muncul di bagian "File publik terbaru" pada Beranda dan Dashboard, tersinkron melalui Supabase Realtime; gambar/video mempertahankan rasio aspek bawaan file dan diskalakan sesuai batas ruang UI tanpa dipotong, sedangkan PDF, arsip, teks, serta file lain memakai ikon/tipe khusus. File Private tidak ditampilkan.
 - Share video YouTube valid melalui YouTube privacy-enhanced embed dengan referrer/origin eksplisit di halaman YouTube, Beranda, dan aktivitas Dashboard; pemilik dapat mengubah visibilitas video Public/Private dan sediakan tautan fallback untuk membuka video di YouTube. Private video hanya ditampilkan pemiliknya. Tidak ada converter atau downloader.
 - Chat room publik realtime; private room dibatasi oleh RLS `chat_room_members`.
 - Buat invite code admin/owner, nonaktifkan kode oleh owner, notifikasi saat kode digunakan.
