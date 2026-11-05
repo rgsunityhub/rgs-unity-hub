@@ -139,9 +139,10 @@ a { color: inherit; }
 .public-file-preview { width: 104px; height: 60px; flex: 0 0 104px; display: flex; align-items: center; justify-content: center; gap: 7px; overflow: hidden; border: 1px solid #303138; border-radius: 6px; background: #191a1f; color: #a4a5ad; font-size: 8px; }
 .public-file-preview img, .public-file-preview video { width: 100%; height: 100%; object-fit: contain; background: #050506; }
 .public-file-preview video, .file-preview-video { -webkit-appearance: none; }
-.public-file-preview video::-webkit-media-controls-overflow-button,
-.file-preview-video::-webkit-media-controls-overflow-button { display: none !important; }
 .public-image-preview-button { display: block; max-width: 100%; max-height: 100%; padding: 0; border: 0; background: transparent; cursor: zoom-in; }
+.public-video-preview-button { display: block; max-width: 100%; max-height: 100%; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.public-video-preview-button video { pointer-events: none; }
+.public-video-preview-button video::-webkit-media-controls { display: none !important; }
 .public-file-type-preview { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; width: 100%; height: 100%; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: zoom-in; }
 .public-file-type-preview:hover { color: #ececef; }
 .public-file-preview .file-type-icon { width: auto; height: auto; border: 0; background: transparent; }
@@ -169,8 +170,6 @@ a { color: inherit; }
 .file-preview-video, .file-preview-iframe { display: block; width: 100%; height: 100%; min-height: 0; border: 0; background: #08090c; }
 .file-preview-video { flex: 1; }
 .file-preview-video::-webkit-media-controls-fullscreen-button { display: none !important; }
-.public-file-preview video::-webkit-media-controls-mute-button,
-.public-file-preview video::-webkit-media-controls-volume-slider,
 .file-preview-video::-webkit-media-controls-mute-button,
 .file-preview-video::-webkit-media-controls-volume-slider { display: none !important; }
 .file-video-volume { display: flex; align-items: center; gap: 9px; min-height: 42px; padding: 4px 10px; border-top: 1px solid #292a30; background: #111216; color: #b6b7bf; }

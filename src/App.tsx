@@ -475,7 +475,7 @@ function PublicFileCard({ file, ownerName, onDownload }: { file: { id: string; n
       {kind === "image" && previewUrl && !previewFailed
         ? <button className="public-image-preview-button" type="button" aria-label={`Perbesar gambar ${file.name}`} title="Klik untuk memperbesar" onClick={() => setPreviewOpen(true)}><img src={previewUrl} alt={`Pratinjau ${file.name}`} loading="lazy" onError={() => { setPreviewFailed(true); setFileError("Preview gagal dimuat."); }} /></button>
         : kind === "video" && previewUrl
-          ? <video className="public-file-video" src={previewUrl} controls controlsList="nodownload noplaybackrate noremoteplayback" disablePictureInPicture disableRemotePlayback preload="metadata" playsInline aria-label={`Pratinjau ${file.name}`} onError={() => setFileError("Preview gagal dimuat.")} />
+          ? <button className="public-video-preview-button" type="button" aria-label={`Buka pratinjau video ${file.name}`} title="Klik untuk membuka video" onClick={() => setPreviewOpen(true)}><video className="public-file-video" src={previewUrl} autoPlay loop muted playsInline aria-hidden="true" onError={() => setFileError("Preview gagal dimuat.")} /></button>
           : <button className="public-file-type-preview" type="button" aria-label={`Lihat file ${file.name}`} title="Klik untuk melihat file" onClick={() => setPreviewOpen(true)}><div className={`file-type-icon ${kind}`}><TypeIcon size={20} /></div><span>{typeLabel}</span></button>}
     </div>
     {previewOpen && <FilePreviewModal file={file} ownerName={ownerName} onClose={() => setPreviewOpen(false)} />}
