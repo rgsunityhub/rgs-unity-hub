@@ -56,6 +56,7 @@ Community hub responsive untuk RGS. Frontend dibuat dengan React + TypeScript + 
    Key publishable/anon memang digunakan di browser. Jangan pernah menaruh `service_role` key di file `VITE_*`, frontend, GitHub, atau Vercel client variables.
 
 4. Schema `supabase/schema.sql` sudah dijalankan pada project yang terhubung di workspace ini. Untuk project Supabase baru, jalankan seluruh isi file itu satu kali di **SQL Editor**. Script membuat tabel, trigger validasi invite, bucket, RLS, role helper, dan menambahkan tabel chat ke Realtime.
+   Jika project yang sudah ada memakai policy baca Storage lama yang membuat preview/unduh file publik gagal, jalankan `supabase/migrations/20261105211600_fix_public_file_storage_policy.sql` satu kali melalui **SQL Editor**.
 5. Edge Function `login-with-nickname` sudah di-deploy ke project yang terhubung. Untuk deploy ulang atau menyiapkan project baru, install Supabase CLI jika belum tersedia, login, link project, lalu deploy fungsi. Project ref yang terhubung saat ini adalah `stdxeimphibosmhkhzvr`:
 
    ```powershell
