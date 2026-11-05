@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import {
-  ArrowDownToLine, ArrowUpRight, Bell, Check, CircleHelp, File, FileImage,
+  ArrowDownToLine, ArrowUpRight, Bell, Check, CircleHelp, Copy, File, FileImage,
   Film, Folder, Globe2, Home, KeyRound, LayoutDashboard, Link2, LockKeyhole, LogOut,
   Menu, MessageCircle, MoreHorizontal, Plus, Search, Send, Settings, Shield, Sparkles, Upload,
-  Users, X, Youtube, type LucideIcon,
+  Trash2, Users, X, Youtube, type LucideIcon,
 } from "lucide-react";
 import { isSupabaseConfigured, supabase } from "./lib/supabase";
 import type { Page, Profile, Publication, Role } from "./lib/types";
@@ -318,7 +318,7 @@ function HomePage({ profile, setError }: { profile: Profile; setError: (message:
     <PageHeading eyebrow="RGS COMMUNITY" title={<>Beranda<span className="title-dot">.</span></>} subtitle="Cerita, karya, dan momen dari keluarga besar RGS." action={<button className="button button-primary" onClick={() => setCompose((open) => !open)}><Plus size={17} /> Buat publikasi</button>} />
     {compose && <form className="compose-card" onSubmit={publish}><Field label="Judul publikasi" name="title" placeholder="Apa yang ingin kamu bagikan?" maxLength={100} required /><label className="field"><span>Cerita kamu</span><textarea name="body" placeholder="Tulis sesuatu untuk komunitas..." maxLength={2000} rows={3} required /></label><div className="compose-footer"><span><Globe2 size={14} /> Publik — terlihat oleh semua member</span><button className="button button-primary"><Send size={15} /> Publikasikan</button></div></form>}
     <div className="feed-toolbar"><div className="feed-tabs"><button className="active">Terbaru</button></div><label className="search-box"><Search size={16} /><input placeholder="Cari publikasi..." value={search} onChange={(event) => setSearch(event.target.value)} /></label></div>
-    <section className="feed-list">{loading ? <LoadingLine /> : filtered.length ? filtered.map((post) => <PublicationCard key={post.id} post={post} profileId={profile.id} setError={setError} />) : <EmptyState title="Belum ada publikasi" body="Jadilah yang pertama membagikan kabar ke komunitas RGS." />}</section>
+    <section className="feed-list">{loading ? <LoadingLine /> : filtered.length ? filtered.map((post) => <PublicationCard key={post.id} post={post} profileId={profile.id} onDelete={load} setError={setError} />) : <EmptyState title="Belum ada publikasi" body="Jadilah yang pertama membagikan kabar ke komunitas RGS." />}</section>
     <div className="feed-footer">Menampilkan publikasi publik komunitas <span>RGS UNITY HUB</span></div>
   </>;
 }
@@ -383,7 +383,7 @@ function DashboardPage({ profile, setError }: { profile: Profile; setError: (mes
     <div className="welcome-banner"><div className="banner-watermark" /><div className="banner-copy"><span className="eyebrow">UNITY • GAMING • COMMUNITY</span><h2>Make your mark<br />in the community.</h2><p>Berbagi karya. Bangun koneksi. Tumbuh bersama RGS.</p></div><img src="/rgs-logo.png" alt="" /></div>
     <section className="stats-grid">{stats.map(({ label, value, icon: Icon, tone, note }) => <div className="stat-card" key={label}><div className={`stat-icon ${tone}`}><Icon size={18} /></div><span className="stat-label">{label}</span><strong>{value.toLocaleString("id-ID")}</strong><small>{note}</small></div>)}</section>
     <div className="section-heading"><div><span className="eyebrow">COMMUNITY PULSE</span><h2>Aktivitas terbaru</h2></div><span className="live-tag"><i /> LIVE FEED</span></div>
-    <div className="feed-list">{recent.length ? recent.map((post) => <PublicationCard key={post.id} post={post} profileId={profile.id} setError={setError} />) : <EmptyState title="Ruang masih tenang" body="Publikasi terbaru akan muncul di sini." />}</div>
+    <div className="feed-list">{recent.length ? recent.map((post) => <PublicationCard key={post.id} post={post} profileId={profile.id} onDelete={load} setError={setError} />) : <EmptyState title="Ruang masih tenang" body="Publikasi terbaru akan muncul di sini." />}</div>
   </>;
 }
 
@@ -654,13 +654,31 @@ function SettingsPage() {
   </>;
 }
 
-function PublicationCard({ post, profileId, setError }: { post: Publication; profileId: string; setError: (message: string) => void }) {
+function PublicationCard({ post, profileId, onDelete, setError }: { post: Publication; profileId: string; onDelete: () => void | Promise<void>; setError: (message: string) => void }) {
   const [liked, setLiked] = useState(false);
   const [likes, setLikes] = useState(0);
   const [commentCount, setCommentCount] = useState(0);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [comments, setComments] = useState<Array<{ id: string; body: string; created_at: string; nickname: string }>>([]);
   const [commentText, setCommentText] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const canDelete = post.owner_id === profileId;
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/#publication-${post.id}`);
+      setMenuOpen(false);
+    } catch (error) {
+      setError(friendlyError(error));
+    }
+  };
+  const deletePublication = async () => {
+    if (!supabase || !canDelete || !window.confirm("Hapus publikasi ini? Tindakan ini tidak dapat dibatalkan.")) return;
+    const { error } = await supabase.from("publications").delete().eq("id", post.id);
+    if (error) { setError(error.message); return; }
+    setMenuOpen(false);
+    await onDelete();
+  };
 
   const refreshCounts = useCallback(async () => {
     if (!supabase) return;
@@ -715,7 +733,7 @@ function PublicationCard({ post, profileId, setError }: { post: Publication; pro
     else { setCommentText(""); await loadComments(); }
   };
 
-  return <article className="post-card"><header className="post-header"><Avatar profile={{ nickname: post.profiles?.nickname ?? "Member", avatar_url: post.profiles?.avatar_url ?? null }} /><div className="post-author"><strong>{post.profiles?.nickname ?? "Member"} <RoleBadge role={post.profiles?.role ?? "user"} /></strong><span>{dateLabel(post.created_at)} · {post.kind === "youtube" ? "Video YouTube" : "Publikasi"}</span></div><button className="icon-button post-more" aria-label="Opsi"><MoreHorizontal size={19} /></button></header><div className="post-content"><h3>{post.title}</h3><p>{post.body}</p></div><footer className="post-actions"><button className={`post-action ${liked ? "reacted" : ""}`} aria-label={liked ? "Batalkan apresiasi" : "Beri apresiasi"} onClick={() => void toggleLike()}><Sparkles size={16} /><span>Apresiasi {likes ? likes : ""}</span></button><button className="post-action" aria-expanded={commentsOpen} onClick={() => { const next = !commentsOpen; setCommentsOpen(next); if (next) void loadComments(); }}><MessageCircle size={16} /><span>Diskusi {commentCount ? commentCount : ""}</span></button><span className="public-label"><Globe2 size={13} /> PUBLIC</span></footer>{commentsOpen && <section className="comments-panel"><div className="comments-list">{comments.map((comment) => <div className="comment-row" key={comment.id}><strong>{comment.nickname}</strong><span>{comment.body}</span><time>{new Date(comment.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</time></div>)}{!comments.length && <span className="comments-empty">Belum ada diskusi. Mulai percakapan yang baik.</span>}</div><form className="comment-form" onSubmit={addComment}><input value={commentText} onChange={(event) => setCommentText(event.target.value)} placeholder="Tulis komentar..." maxLength={1000} /><button className="icon-button" disabled={!commentText.trim()} aria-label="Kirim komentar"><Send size={15} /></button></form></section>}</article>;
+  return <article className="post-card" id={`publication-${post.id}`}><header className="post-header"><Avatar profile={{ nickname: post.profiles?.nickname ?? "Member", avatar_url: post.profiles?.avatar_url ?? null }} /><div className="post-author"><strong>{post.profiles?.nickname ?? "Member"} <RoleBadge role={post.profiles?.role ?? "user"} /></strong><span>{dateLabel(post.created_at)} · {post.kind === "youtube" ? "Video YouTube" : "Publikasi"}</span></div><div className="post-menu-wrap"><button className="icon-button post-more" aria-label={`Opsi publikasi ${post.title}`} aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}><MoreHorizontal size={19} /></button>{menuOpen && <div className="post-menu" role="menu"><button role="menuitem" onClick={() => void copyLink()}><Copy size={14} />Salin tautan</button>{canDelete && <button className="danger-action" role="menuitem" onClick={() => void deletePublication()}><Trash2 size={14} />Hapus publikasi</button>}</div>}</div></header><div className="post-content"><h3>{post.title}</h3><p>{post.body}</p></div><footer className="post-actions"><button className={`post-action ${liked ? "reacted" : ""}`} aria-label={liked ? "Batalkan apresiasi" : "Beri apresiasi"} onClick={() => void toggleLike()}><Sparkles size={16} /><span>Apresiasi {likes ? likes : ""}</span></button><button className="post-action" aria-expanded={commentsOpen} onClick={() => { const next = !commentsOpen; setCommentsOpen(next); if (next) void loadComments(); }}><MessageCircle size={16} /><span>Diskusi {commentCount ? commentCount : ""}</span></button><span className="public-label"><Globe2 size={13} /> PUBLIC</span></footer>{commentsOpen && <section className="comments-panel"><div className="comments-list">{comments.map((comment) => <div className="comment-row" key={comment.id}><strong>{comment.nickname}</strong><span>{comment.body}</span><time>{new Date(comment.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</time></div>)}{!comments.length && <span className="comments-empty">Belum ada diskusi. Mulai percakapan yang baik.</span>}</div><form className="comment-form" onSubmit={addComment}><input value={commentText} onChange={(event) => setCommentText(event.target.value)} placeholder="Tulis komentar..." maxLength={1000} /><button className="icon-button" disabled={!commentText.trim()} aria-label="Kirim komentar"><Send size={15} /></button></form></section>}</article>;
 }
 
 function PageHeading({ eyebrow, title, subtitle, action }: { eyebrow: string; title: React.ReactNode; subtitle: string; action?: React.ReactNode }) {

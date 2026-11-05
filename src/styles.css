@@ -138,7 +138,12 @@ a { color: inherit; }
 .post-author { flex: 1; min-width: 0; }
 .post-author > strong { display: flex; align-items: center; gap: 7px; font-size: 11px; }
 .post-author > span { display: block; color: #777881; font-size: 9px; margin-top: 4px; }
+.post-menu-wrap { position: relative; align-self: flex-start; }
 .post-more { align-self: flex-start; }
+.post-menu { position: absolute; z-index: 3; top: 34px; right: 0; min-width: 158px; padding: 4px; border: 1px solid #303138; border-radius: 6px; background: #17181d; box-shadow: 0 10px 24px #0008; }
+.post-menu button { width: 100%; display: flex; align-items: center; gap: 8px; padding: 8px; border: 0; border-radius: 4px; background: transparent; color: #d7d8df; text-align: left; font-size: 10px; }
+.post-menu button:hover { background: #24252b; }
+.post-menu button.danger-action { color: #e6a1a1; }
 .role-badge { display: inline-flex; align-items: center; gap: 4px; vertical-align: 1px; border-radius: 4px; padding: 3px 5px; font-size: 7px; letter-spacing: .6px; font-weight: 700; line-height: 1; }
 .role-badge i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
 .role-badge.owner { color: #e7d394; background: rgba(231,211,148,.1); }
