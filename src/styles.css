@@ -464,4 +464,7 @@ a { color: inherit; }
   .file-row { gap: 7px; padding: 8px; }
   .file-actions .icon-button { width: 28px; }
   .visibility-chip { font-size: 7px; padding: 4px; }
+  .public-feed-file { gap: 7px; padding: 8px; }
+  .public-file-preview { width: 72px; height: 54px; flex-basis: 72px; }
+  .public-feed-file > .visibility-chip { display: none; }
 }
