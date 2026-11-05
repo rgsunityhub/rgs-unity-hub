@@ -18,7 +18,7 @@ const navItems: NavItem[] = [
   { id: "members", label: "Members", icon: Users },
   { id: "profile", label: "Profil", icon: Shield },
   { id: "invites", label: "Invite code", icon: KeyRound, roles: ["owner", "admin"] },
-  { id: "notifications", label: "Notifications", icon: Bell, roles: ["owner", "admin"] },
+  { id: "notifications", label: "Notifications", icon: Bell },
   { id: "settings", label: "Settings", icon: Settings, roles: ["owner"] },
 ];
 
@@ -122,7 +122,7 @@ function App() {
   const selectedPage = visibleNav.some((item) => item.id === page) ? page : "home";
 
   return (
-    <HubLayout profile={profile} selectedPage={selectedPage} navItems={visibleNav} onNavigate={setPage} onSignOut={signOut}>
+    <HubLayout profile={profile} selectedPage={selectedPage} navItems={visibleNav} onNavigate={setPage} onSignOut={signOut} setError={setError}>
       {error && <div className="toast error-toast"><CircleHelp size={17} />{error}<button onClick={() => setError("")} aria-label="Tutup"><X size={15} /></button></div>}
       <PageContent page={selectedPage} profile={profile} setProfile={setProfile} setError={setError} />
     </HubLayout>
@@ -244,22 +244,31 @@ function Field({ label, name, type = "text", ...props }: { label: string; name: 
   return <label className="field"><span>{label}</span><input name={name} type={type} {...props} /></label>;
 }
 
-function HubLayout({ profile, selectedPage, navItems: items, onNavigate, onSignOut, children }: { profile: Profile; selectedPage: Page; navItems: NavItem[]; onNavigate: (page: Page) => void; onSignOut: () => void; children: React.ReactNode }) {
+function HubLayout({ profile, selectedPage, navItems: items, onNavigate, onSignOut, setError, children }: { profile: Profile; selectedPage: Page; navItems: NavItem[]; onNavigate: (page: Page) => void; onSignOut: () => void; setError: (message: string) => void; children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const pageTitle = items.find((item) => item.id === selectedPage)?.label ?? "Beranda";
+  const refreshUnreadCount = useCallback(async () => {
+    if (!supabase) return;
+    const { count, error } = await supabase.from("notifications").select("id", { count: "exact", head: true }).is("read_at", null);
+    if (error) setError(error.message);
+    else setUnreadCount(count ?? 0);
+  }, [setError]);
+  useEffect(() => { void refreshUnreadCount(); }, [refreshUnreadCount]);
+  useRealtimeRefresh("rgs-header-notifications", NOTIFICATION_TABLE, refreshUnreadCount, `user_id=eq.${profile.id}`, setError);
   return (
     <div className="app-shell">
       <aside className={`sidebar ${menuOpen ? "sidebar-open" : ""}`}>
         <div className="sidebar-brand"><img src="/rgs-logo.png" alt="RGS" /><div><strong>RGS <span>UNITY HUB</span></strong><small>REVOLUSI GAMING SPORT</small></div><button className="mobile-close" onClick={() => setMenuOpen(false)} aria-label="Tutup menu"><X size={19} /></button></div>
         <div className="workspace-label">WORKSPACE</div>
-        <nav className="side-nav">{items.map(({ id, label, icon: Icon }) => <button key={id} className={selectedPage === id ? "nav-link selected" : "nav-link"} onClick={() => { onNavigate(id); setMenuOpen(false); }}><Icon size={18} /><span>{label}</span>{id === "notifications" && <i className="nav-indicator" />}</button>)}</nav>
+        <nav className="side-nav">{items.map(({ id, label, icon: Icon }) => <button key={id} className={selectedPage === id ? "nav-link selected" : "nav-link"} onClick={() => { onNavigate(id); setMenuOpen(false); }}><Icon size={18} /><span>{label}</span>{id === "notifications" && unreadCount > 0 && <span className="nav-indicator">{unreadCount > 99 ? "99+" : unreadCount}</span>}</button>)}</nav>
         <div className="sidebar-bottom">
           <div className="community-card"><div className="community-mark"><Sparkles size={16} /></div><strong>RGS Community</strong><span>UNITY • GAMING • COMMUNITY</span></div>
           <div className="sidebar-user"><Avatar profile={profile} /><div className="user-meta"><strong>{profile.nickname}</strong><span><RoleBadge role={profile.role} /></span></div><button className="icon-button" onClick={onSignOut} title="Keluar"><LogOut size={17} /></button></div>
         </div>
       </aside>
       <div className="main-column">
-        <header className="topbar"><button className="mobile-menu icon-button" onClick={() => setMenuOpen(true)} aria-label="Buka menu"><Menu size={20} /></button><div className="breadcrumb">RGS HUB <span>/</span> <strong>{pageTitle}</strong></div><div className="topbar-actions"><div className="online-indicator">RGS COMMUNITY</div><button className="icon-button notification-button" aria-label="Notifikasi"><Bell size={18} /><i /></button><button className="top-avatar" title={profile.nickname}><Avatar profile={profile} /></button></div></header>
+        <header className="topbar"><button className="mobile-menu icon-button" onClick={() => setMenuOpen(true)} aria-label="Buka menu"><Menu size={20} /></button><div className="breadcrumb">RGS HUB <span>/</span> <strong>{pageTitle}</strong></div><div className="topbar-actions"><div className="online-indicator">RGS COMMUNITY</div><button className="icon-button notification-button" onClick={() => onNavigate("notifications")} aria-label={unreadCount ? `Notifikasi, ${unreadCount} belum dibaca` : "Notifikasi"} title={unreadCount ? `${unreadCount} notifikasi belum dibaca` : "Notifikasi"}><Bell size={18} />{unreadCount > 0 && <i />}</button><button className="top-avatar" onClick={() => onNavigate("profile")} aria-label={`Buka profil ${profile.nickname}`} title={profile.nickname}><Avatar profile={profile} /></button></div></header>
         <main className="page-container">{children}</main>
       </div>
       {menuOpen && <button className="mobile-overlay" onClick={() => setMenuOpen(false)} aria-label="Tutup navigasi" />}

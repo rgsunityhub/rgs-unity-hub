@@ -120,7 +120,7 @@ Ganti kode contoh dengan nilai unik, jangan gunakan ulang. SQL Editor berjalan d
 - `notifications`, `password_reset_requests`, `auth_login_attempts`.
 - RLS untuk memastikan profil dan publikasi privat hanya dapat diubah pemiliknya; chat privat mensyaratkan keanggotaan room.
 - Bucket privat `member-files`; aturan Storage memeriksa metadata file sebelum membaca objek. Bucket `avatars` publik hanya untuk gambar profil.
-- Supabase Realtime mencakup profil, publikasi, interaksi publikasi, file, invite, notifikasi, dan pesan chat agar halaman aktif memperbarui data tanpa reload.
+- Supabase Realtime mencakup profil, publikasi, interaksi publikasi, file, invite, notifikasi, dan pesan chat agar halaman aktif memperbarui data tanpa reload. Indikator notifikasi di header/sidebar menghitung notifikasi belum dibaca milik akun aktif; tombol bel membuka halaman notifikasi dan avatar membuka profil.
 
 Semua key project selain publishable/anon harus tetap berada di server. RLS adalah batas keamanan utama; menyembunyikan navigasi saja tidak dianggap otorisasi.
 
