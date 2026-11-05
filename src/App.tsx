@@ -265,7 +265,7 @@ function HomePage({ profile, setError }: { profile: Profile; setError: (message:
   const [search, setSearch] = useState("");
   const load = useCallback(async () => {
     if (!supabase) return;
-    const { data, error } = await supabase.from("publications").select("*, profiles(nickname, avatar_url, role)").eq("visibility", "public").order("created_at", { ascending: false }).limit(25);
+    const { data, error } = await supabase.from("publications").select("*, profiles!publications_owner_id_fkey(nickname, avatar_url, role)").eq("visibility", "public").order("created_at", { ascending: false }).limit(25);
     if (error) setError(error.message); else setPosts(normalizePublications(data));
     setLoading(false);
   }, [setError]);
@@ -302,7 +302,7 @@ function DashboardPage({ profile, setError }: { profile: Profile; setError: (mes
       supabase.from("files").select("size_bytes, visibility").eq("owner_id", profile.id),
       supabase.from("publications").select("id", { count: "exact", head: true }).eq("owner_id", profile.id),
       supabase.from("invite_codes").select("max_uses, used_count"),
-      supabase.from("publications").select("*, profiles(nickname, avatar_url, role)").eq("visibility", "public").order("created_at", { ascending: false }).limit(4),
+      supabase.from("publications").select("*, profiles!publications_owner_id_fkey(nickname, avatar_url, role)").eq("visibility", "public").order("created_at", { ascending: false }).limit(4),
     ]).then(([members, admins, users, posts, files, myPosts, invites, feed]) => {
       if (!active) return;
       const fileRows = files.data ?? [];
@@ -448,7 +448,7 @@ function YouTubePage({ profile, setError }: { profile: Profile; setError: (messa
   const [visibility, setVisibility] = useState("public");
   const load = useCallback(async () => {
     if (!supabase) return;
-    const { data, error } = await supabase.from("publications").select("*, profiles(nickname, avatar_url, role)").eq("kind", "youtube").order("created_at", { ascending: false });
+    const { data, error } = await supabase.from("publications").select("*, profiles!publications_owner_id_fkey(nickname, avatar_url, role)").eq("kind", "youtube").order("created_at", { ascending: false });
     if (error) setError(error.message); else setVideos(normalizePublications(data));
   }, [setError]);
   useEffect(() => { void load(); }, [load]);
