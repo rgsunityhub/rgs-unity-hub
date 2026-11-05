@@ -2,7 +2,7 @@
 
 Community hub responsive untuk RGS. Frontend dibuat dengan React + TypeScript + Vite; autentikasi, PostgreSQL, file storage, RLS, dan realtime menggunakan Supabase. Website statis dapat di-host di Vercel Hobby tanpa watermark.
 
-> **Status:** project Supabase `stdxeimphibosmhkhzvr` sudah dibuat; schema database dan Edge Function login sudah diterapkan, dan konfigurasi lokal sudah disambungkan. Website sudah di-deploy ke [rgs-unity-hub.vercel.app](https://rgs-unity-hub.vercel.app), dan Site URL serta Redirect URL Supabase untuk domain tersebut sudah dikonfigurasi. Deployment saat ini menggunakan upload folder `dist` secara manual, belum terhubung ke GitHub untuk auto-deploy. Fitur yang belum tersedia dicatat di bagian [Cakupan saat ini](#cakupan-saat-ini), jadi ini bukan klaim bahwa semua fitur permintaan sudah selesai.
+> **Status:** project Supabase `stdxeimphibosmhkhzvr` sudah dibuat; schema database dan Edge Function login sudah diterapkan, dan konfigurasi lokal sudah disambungkan. Website sudah di-deploy ke [rgs-unity-hub.vercel.app](https://rgs-unity-hub.vercel.app), dan Site URL serta Redirect URL Supabase untuk domain tersebut sudah dikonfigurasi. Source tersimpan di repository GitHub private [rgsunityhub/rgs-unity-hub](https://github.com/rgsunityhub/rgs-unity-hub), yang terhubung ke project Vercel dengan auto-deploy dari branch `main`. Fitur yang belum tersedia dicatat di bagian [Cakupan saat ini](#cakupan-saat-ini), jadi ini bukan klaim bahwa semua fitur permintaan sudah selesai.
 
 ## Struktur project
 
@@ -141,16 +141,22 @@ File di bucket tetap privat kecuali metadata file menyatakan `public`; owner jug
 
 ## Deploy gratis ke Vercel
 
-Deployment saat ini: [https://rgs-unity-hub.vercel.app](https://rgs-unity-hub.vercel.app). Deployment pertama dibuat dari folder `dist` yang sudah dibangun, sehingga domain publik tidak menunggu integrasi GitHub. Upload manual ini tidak membuat auto-deploy; untuk update otomatis, hubungkan repository GitHub sebagai berikut:
+Deployment production: [https://rgs-unity-hub.vercel.app](https://rgs-unity-hub.vercel.app). Repository GitHub private [rgsunityhub/rgs-unity-hub](https://github.com/rgsunityhub/rgs-unity-hub) sudah terhubung ke project Vercel `rgs-unity-hub`; Vercel GitHub App hanya diberi akses ke repository tersebut. Setiap push ke branch `main` memicu build dan deployment production otomatis. `.env.local` tidak ikut commit (`.gitignore` mengecualikannya).
 
-1. Buat repository GitHub baru dan push source project; pastikan `.env.local` tidak pernah ikut commit (`.gitignore` sudah mengecualikannya).
-2. Di [Vercel](https://vercel.com), buka project `rgs-unity-hub` lalu hubungkan repository GitHub melalui **Settings → Git** (atau import project Git baru).
-3. Framework preset: **Vite**. Build command `npm run build`, output directory `dist`.
-4. Isi **Project Settings → Environment Variables**:
+Konfigurasi Vercel yang digunakan:
+
+1. Framework preset **Vite**, build command `npm run build`, output directory `dist` (ditetapkan juga di `vercel.json`).
+2. **Project Settings → Environment Variables** berisi `VITE_SUPABASE_URL` dan `VITE_SUPABASE_ANON_KEY` untuk Production, Preview, dan Development. Publishable/anon key memang digunakan di browser; jangan pernah menambahkan `service_role` key sebagai variabel `VITE_*`.
+3. Site URL Supabase dan Redirect URLs sudah diatur untuk domain production ini.
+
+Untuk menyiapkan ulang koneksi Git pada project baru:
+
+1. Buat repository GitHub, push source project, dan pastikan `.env.local` tidak pernah ikut commit.
+2. Di [Vercel](https://vercel.com), import repository tersebut lalu pilih **Vite** sebagai framework.
+3. Tambahkan environment variables:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
-5. Deploy. Setiap push ke branch production yang terhubung akan memicu deployment otomatis.
-6. Untuk project ini, URL publik `https://rgs-unity-hub.vercel.app` sudah dimasukkan ke Supabase **Authentication → URL Configuration** sebagai Site URL dan Redirect URL.
+4. Deploy dan masukkan URL publik yang diberikan Vercel ke Supabase **Authentication → URL Configuration** sebagai Site URL dan Redirect URL.
 7. Pastikan fungsi `login-with-nickname` sudah dideploy ke project Supabase yang sama.
 
 Deploy statis Vite tidak memerlukan Vercel Function. GitHub menyimpan source; Supabase menyediakan backend. Jangan menganggap URL publik aktif sebelum konfigurasi Supabase dan deploy Vercel selesai.
