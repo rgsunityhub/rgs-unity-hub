@@ -131,7 +131,7 @@ Semua key project selain publishable/anon harus tetap berada di server. RLS adal
 - Menu opsi publikasi di Beranda untuk menyalin tautan; pemilik publikasi dapat menghapus publikasinya sendiri sesuai kebijakan RLS.
 - Profil sendiri (bio/avatar), daftar dan pencarian member.
 - Upload/download/hapus file milik sendiri, visibilitas public/private, validasi MIME yang diizinkan serta batas 25 MB per file.
-- Share video YouTube valid melalui YouTube privacy-enhanced embed; private video hanya ditampilkan pemiliknya. Tidak ada converter atau downloader.
+- Share video YouTube valid melalui YouTube privacy-enhanced embed di halaman YouTube, Beranda, dan aktivitas Dashboard; private video hanya ditampilkan pemiliknya. Tidak ada converter atau downloader.
 - Chat room publik realtime; private room dibatasi oleh RLS `chat_room_members`.
 - Buat invite code admin/owner, nonaktifkan kode oleh owner, notifikasi saat kode digunakan.
 
