@@ -438,7 +438,7 @@ function PublicFileCard({ file, ownerName, onDownload }: { file: { id: string; n
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewFailed, setPreviewFailed] = useState(false);
   const [fileError, setFileError] = useState("");
-  const [imagePreviewOpen, setImagePreviewOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
   const kind = file.mime_type.startsWith("image/") ? "image"
     : file.mime_type.startsWith("video/") ? "video"
@@ -456,13 +456,13 @@ function PublicFileCard({ file, ownerName, onDownload }: { file: { id: string; n
     return () => { active = false; };
   }, [file.storage_path, kind]);
   useEffect(() => {
-    if (!imagePreviewOpen) return;
+    if (!previewOpen) return;
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setImagePreviewOpen(false);
+      if (event.key === "Escape") setPreviewOpen(false);
     };
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [imagePreviewOpen]);
+  }, [previewOpen]);
   const TypeIcon = kind === "image" ? FileImage : kind === "video" ? Film : kind === "pdf" || kind === "text" ? FileText : kind === "archive" ? FileArchive : File;
   const typeLabel = kind === "pdf" ? "PDF" : kind === "archive" ? extension.toUpperCase() : kind === "text" ? extension.toUpperCase() || "TEXT" : kind === "video" ? "VIDEO" : kind === "image" ? extension.toUpperCase() : "FILE";
   const missingObject = fileError.toLowerCase().includes("object not found");
@@ -473,22 +473,73 @@ function PublicFileCard({ file, ownerName, onDownload }: { file: { id: string; n
   return <article className={`public-feed-file ${kind}`}>
     <div className="public-file-preview">
       {kind === "image" && previewUrl && !previewFailed
-        ? <button className="public-image-preview-button" type="button" aria-label={`Perbesar gambar ${file.name}`} title="Klik untuk memperbesar" onClick={() => setImagePreviewOpen(true)}><img src={previewUrl} alt={`Pratinjau ${file.name}`} loading="lazy" onError={() => { setPreviewFailed(true); setFileError("Preview gagal dimuat."); }} /></button>
+        ? <button className="public-image-preview-button" type="button" aria-label={`Perbesar gambar ${file.name}`} title="Klik untuk memperbesar" onClick={() => setPreviewOpen(true)}><img src={previewUrl} alt={`Pratinjau ${file.name}`} loading="lazy" onError={() => { setPreviewFailed(true); setFileError("Preview gagal dimuat."); }} /></button>
         : kind === "video" && previewUrl
           ? <video src={previewUrl} controls preload="metadata" playsInline aria-label={`Pratinjau ${file.name}`} onError={() => setFileError("Preview gagal dimuat.")} />
-          : <><div className={`file-type-icon ${kind}`}><TypeIcon size={20} /></div><span>{typeLabel}</span></>}
+          : <button className="public-file-type-preview" type="button" aria-label={`Lihat file ${file.name}`} title="Klik untuk melihat file" onClick={() => setPreviewOpen(true)}><div className={`file-type-icon ${kind}`}><TypeIcon size={20} /></div><span>{typeLabel}</span></button>}
     </div>
-    {imagePreviewOpen && previewUrl && <div className="image-lightbox-backdrop" onClick={() => setImagePreviewOpen(false)}>
-      <section className="image-lightbox" role="dialog" aria-modal="true" aria-label={`Pratinjau gambar ${file.name}`} onClick={(event) => event.stopPropagation()}>
-        <button className="image-lightbox-close icon-button" type="button" aria-label="Tutup pratinjau gambar" onClick={() => setImagePreviewOpen(false)}><X size={20} /></button>
-        <img className="image-lightbox-image" src={previewUrl} alt={file.name} />
-        <div className="image-lightbox-caption"><strong>{file.name}</strong><span>{formatBytes(file.size_bytes)} · oleh {ownerName}</span></div>
-      </section>
-    </div>}
-    <div className="file-row-name"><strong>{file.name}</strong><span>{typeLabel} · {formatBytes(file.size_bytes)} · {dateLabel(file.created_at)} · oleh {ownerName}</span>{fileError && <span className="public-file-error" role="status">{missingObject ? "File tidak tersedia. Pemilik perlu menghapus entri lama di Storage, lalu mengunggah ulang file." : `File tidak dapat dimuat: ${fileError}`}</span>}</div>
+    {previewOpen && <FilePreviewModal file={file} ownerName={ownerName} onClose={() => setPreviewOpen(false)} />}
+    <div className="file-row-name"><button className="file-preview-name" type="button" onClick={() => setPreviewOpen(true)}>{file.name}</button><span>{typeLabel} · {formatBytes(file.size_bytes)} · {dateLabel(file.created_at)} · oleh {ownerName}</span>{fileError && <span className="public-file-error" role="status">{missingObject ? "File tidak tersedia. Pemilik perlu menghapus entri lama di Storage, lalu mengunggah ulang file." : `File tidak dapat dimuat: ${fileError}`}</span>}</div>
     <span className="visibility-chip public"><Globe2 size={13} />Public</span>
     <button className="icon-button" title={`Unduh ${file.name}`} aria-label={`Unduh ${file.name}`} onClick={() => void handleDownload()}><ArrowDownToLine size={17} /></button>
   </article>;
+}
+
+function FilePreviewModal({ file, ownerName, onClose }: { file: { name: string; mime_type: string; size_bytes: number; storage_path: string }; ownerName: string; onClose: () => void }) {
+  const [url, setUrl] = useState("");
+  const [error, setError] = useState("");
+  const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+  const isImage = file.mime_type.startsWith("image/");
+  const isVideo = file.mime_type.startsWith("video/");
+  const isPdf = file.mime_type === "application/pdf" || extension === "pdf";
+  const isText = file.mime_type.startsWith("text/") || ["txt", "md", "log"].includes(extension);
+  const TypeIcon = isImage ? FileImage : isVideo ? Film : isPdf || isText ? FileText : ["zip", "rar", "7z"].includes(extension) ? FileArchive : File;
+
+  useEffect(() => {
+    let active = true;
+    if (!supabase) {
+      setError("Supabase belum dikonfigurasi.");
+      return () => { active = false; };
+    }
+    supabase.storage.from("member-files").createSignedUrl(file.storage_path, 300).then(({ data, error: signedUrlError }) => {
+      if (!active) return;
+      if (signedUrlError) setError(signedUrlError.message);
+      else setUrl(data.signedUrl);
+    });
+    return () => { active = false; };
+  }, [file.storage_path]);
+
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+
+  const download = async () => {
+    if (!supabase) return;
+    const { data, error: downloadError } = await supabase.storage.from("member-files").createSignedUrl(file.storage_path, 60, { download: file.name });
+    if (downloadError) setError(downloadError.message);
+    else window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const unsupportedPreview = !isImage && !isVideo && !isPdf && !isText;
+  return <div className="image-lightbox-backdrop" onClick={onClose}>
+    <section className="image-lightbox file-preview-modal" role="dialog" aria-modal="true" aria-label={`Pratinjau file ${file.name}`} onClick={(event) => event.stopPropagation()}>
+      <button className="image-lightbox-close icon-button" type="button" aria-label="Tutup pratinjau file" onClick={onClose}><X size={20} /></button>
+      <div className="file-preview-content">
+        {!url && !error && <LoadingLine />}
+        {error && <div className="file-preview-message"><TypeIcon size={30} /><strong>File tidak dapat dibuka</strong><span>{error.toLowerCase().includes("object not found") ? "Objek file tidak ditemukan di Storage." : error}</span></div>}
+        {url && isImage && <img className="image-lightbox-image" src={url} alt={file.name} />}
+        {url && isVideo && <video className="file-preview-video" src={url} controls autoPlay playsInline />}
+        {url && isPdf && <iframe className="file-preview-iframe" src={url} title={`Pratinjau ${file.name}`} />}
+        {url && isText && <iframe className="file-preview-iframe text" src={url} title={`Pratinjau ${file.name}`} sandbox="" />}
+        {url && unsupportedPreview && <div className="file-preview-message"><TypeIcon size={30} /><strong>Pratinjau tidak tersedia</strong><span>Jenis file ini tidak mendukung pratinjau langsung. Unduh file untuk membukanya.</span><button className="button button-primary" type="button" onClick={() => void download()}><ArrowDownToLine size={15} />Unduh file</button></div>}
+      </div>
+      <div className="image-lightbox-caption"><strong>{file.name}</strong><span>{formatBytes(file.size_bytes)} · oleh {ownerName}</span>{url && !unsupportedPreview && <button className="icon-button" type="button" aria-label={`Unduh ${file.name}`} title="Unduh file" onClick={() => void download()}><ArrowDownToLine size={17} /></button>}</div>
+    </section>
+  </div>;
 }
 
 function MembersPage({ profile, setError }: { profile: Profile; setError: (message: string) => void }) {
@@ -524,15 +575,16 @@ function MembersPage({ profile, setError }: { profile: Profile; setError: (messa
 }
 
 function StoragePage({ profile, setError }: { profile: Profile; setError: (message: string) => void }) {
-  type StoredFile = { id: string; owner_id: string; name: string; size_bytes: number; visibility: "public" | "private"; created_at: string; storage_path: string; profiles?: { nickname: string } | { nickname: string }[] | null };
+  type StoredFile = { id: string; owner_id: string; name: string; mime_type: string; size_bytes: number; visibility: "public" | "private"; created_at: string; storage_path: string; profiles?: { nickname: string } | { nickname: string }[] | null };
   const [files, setFiles] = useState<StoredFile[]>([]);
   const [sharedFiles, setSharedFiles] = useState<StoredFile[]>([]);
+  const [previewFile, setPreviewFile] = useState<StoredFile | null>(null);
   const [busy, setBusy] = useState(false);
   const [visibilityBusyId, setVisibilityBusyId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const load = useCallback(async () => {
     if (!supabase) return;
-    const { data, error } = await supabase.from("files").select("id, owner_id, name, size_bytes, visibility, created_at, storage_path, profiles!files_owner_id_fkey(nickname)").order("created_at", { ascending: false });
+    const { data, error } = await supabase.from("files").select("id, owner_id, name, mime_type, size_bytes, visibility, created_at, storage_path, profiles!files_owner_id_fkey(nickname)").order("created_at", { ascending: false });
     if (error) { setError(error.message); return; }
     const visibleFiles = (data ?? []) as StoredFile[];
     setFiles(visibleFiles.filter((file) => file.owner_id === profile.id));
@@ -598,11 +650,12 @@ function StoragePage({ profile, setError }: { profile: Profile; setError: (messa
     <div className="storage-summary"><div className="storage-summary-icon"><Folder size={21} /></div><div><span>Storage pribadi</span><strong>{formatBytes(used)} <small>digunakan</small></strong></div><div className="storage-progress"><i style={{ width: `${Math.min(used / (1024 * 1024 * 1024) * 100, 100)}%` }} /></div><small>Batas upload per file: 25 MB</small></div>
     <form className="upload-panel" onSubmit={upload}><div className="upload-icon"><Upload size={19} /></div><div className="upload-copy"><strong>Upload file baru</strong><span>Public dapat dilihat dan diunduh anggota; Private hanya terlihat oleh kamu.</span></div><select className="filter-select" name="visibility" defaultValue="private" disabled={busy}><option value="private">Private</option><option value="public">Public</option></select><label className="button button-primary upload-button"><Upload size={16} />{busy ? "Mengunggah..." : "Pilih file"}<input name="upload" type="file" accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm,application/pdf,text/plain,application/zip" required disabled={busy} /></label><button className="button button-outline" disabled={busy}>Upload</button></form>
     <div className="members-toolbar storage-toolbar"><label className="search-box"><Search size={16} /><input placeholder="Cari file..." value={query} onChange={(event) => setQuery(event.target.value)} /></label><span className="member-count">{files.length} file</span></div>
-    <div className="file-list">{filtered.map((file) => <div className="file-row" key={file.id}><div className="file-type-icon"><File size={18} /></div><div className="file-row-name"><strong>{file.name}</strong><span>{formatBytes(file.size_bytes)} · {dateLabel(file.created_at)}</span></div><button className={`visibility-chip ${file.visibility} visibility-toggle`} disabled={visibilityBusyId === file.id} onClick={() => void toggleVisibility(file)} title={`Ubah menjadi ${file.visibility === "public" ? "Private" : "Public"}`} aria-label={`${file.name}: ${file.visibility}. Ubah menjadi ${file.visibility === "public" ? "Private" : "Public"}`}>{file.visibility === "public" ? <Globe2 size={13} /> : <LockKeyhole size={13} />}{visibilityBusyId === file.id ? "Menyimpan..." : file.visibility}</button><div className="file-actions"><button className="icon-button" title="Unduh" onClick={() => void download(file.storage_path)}><ArrowDownToLine size={17} /></button><button className="icon-button" title="Hapus" onClick={() => void remove(file)}><X size={17} /></button></div></div>)}</div>
+    <div className="file-list">{filtered.map((file) => <div className="file-row" key={file.id}><div className="file-type-icon"><File size={18} /></div><div className="file-row-name"><button className="file-preview-name" type="button" onClick={() => setPreviewFile(file)}>{file.name}</button><span>{formatBytes(file.size_bytes)} · {dateLabel(file.created_at)}</span></div><button className={`visibility-chip ${file.visibility} visibility-toggle`} disabled={visibilityBusyId === file.id} onClick={() => void toggleVisibility(file)} title={`Ubah menjadi ${file.visibility === "public" ? "Private" : "Public"}`} aria-label={`${file.name}: ${file.visibility}. Ubah menjadi ${file.visibility === "public" ? "Private" : "Public"}`}>{file.visibility === "public" ? <Globe2 size={13} /> : <LockKeyhole size={13} />}{visibilityBusyId === file.id ? "Menyimpan..." : file.visibility}</button><div className="file-actions"><button className="icon-button" title="Unduh" onClick={() => void download(file.storage_path)}><ArrowDownToLine size={17} /></button><button className="icon-button" title="Hapus" onClick={() => void remove(file)}><X size={17} /></button></div></div>)}</div>
     {!filtered.length && <EmptyState title="Belum ada file" body="Upload file pertamamu untuk mulai menggunakan storage." />}
     <div className="section-heading"><div><span className="eyebrow">SHARED WITH COMMUNITY</span><h2>File publik</h2></div><span className="member-count">{sharedFiles.length} file</span></div>
-    <div className="file-list">{sharedFiles.filter((file) => file.name.toLowerCase().includes(query.toLowerCase())).map((file) => { const joinedProfile = Array.isArray(file.profiles) ? file.profiles[0] : file.profiles; return <div className="file-row" key={file.id}><div className="file-type-icon"><File size={18} /></div><div className="file-row-name"><strong>{file.name}</strong><span>{formatBytes(file.size_bytes)} · {dateLabel(file.created_at)} · oleh {joinedProfile?.nickname ?? "Member"}</span></div>{file.owner_id === profile.id ? <button className="visibility-chip public visibility-toggle" disabled={visibilityBusyId === file.id} onClick={() => void toggleVisibility(file)} title="Ubah menjadi Private" aria-label={`${file.name}: Public. Ubah menjadi Private`}><Globe2 size={13} />{visibilityBusyId === file.id ? "Menyimpan..." : "Public"}</button> : <span className="visibility-chip public"><Globe2 size={13} />Public</span>}<div className="file-actions"><button className="icon-button" title={`Unduh ${file.name}`} onClick={() => void download(file.storage_path)}><ArrowDownToLine size={17} /></button></div></div>; })}</div>
+    <div className="file-list">{sharedFiles.filter((file) => file.name.toLowerCase().includes(query.toLowerCase())).map((file) => { const joinedProfile = Array.isArray(file.profiles) ? file.profiles[0] : file.profiles; return <div className="file-row" key={file.id}><div className="file-type-icon"><File size={18} /></div><div className="file-row-name"><button className="file-preview-name" type="button" onClick={() => setPreviewFile(file)}>{file.name}</button><span>{formatBytes(file.size_bytes)} · {dateLabel(file.created_at)} · oleh {joinedProfile?.nickname ?? "Member"}</span></div>{file.owner_id === profile.id ? <button className="visibility-chip public visibility-toggle" disabled={visibilityBusyId === file.id} onClick={() => void toggleVisibility(file)} title="Ubah menjadi Private" aria-label={`${file.name}: Public. Ubah menjadi Private`}><Globe2 size={13} />{visibilityBusyId === file.id ? "Menyimpan..." : "Public"}</button> : <span className="visibility-chip public"><Globe2 size={13} />Public</span>}<div className="file-actions"><button className="icon-button" title={`Unduh ${file.name}`} onClick={() => void download(file.storage_path)}><ArrowDownToLine size={17} /></button></div></div>; })}</div>
     {!sharedFiles.some((file) => file.name.toLowerCase().includes(query.toLowerCase())) && <EmptyState title="Belum ada file publik" body="File yang diunggah dengan visibilitas Public akan muncul di sini." />}
+    {previewFile && <FilePreviewModal file={previewFile} ownerName={previewFile.owner_id === profile.id ? profile.nickname : (Array.isArray(previewFile.profiles) ? previewFile.profiles[0]?.nickname : previewFile.profiles?.nickname) ?? "Member"} onClose={() => setPreviewFile(null)} />}
   </>;
 }
 

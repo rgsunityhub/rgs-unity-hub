@@ -139,6 +139,8 @@ a { color: inherit; }
 .public-file-preview { width: 104px; height: 60px; flex: 0 0 104px; display: flex; align-items: center; justify-content: center; gap: 7px; overflow: hidden; border: 1px solid #303138; border-radius: 6px; background: #191a1f; color: #a4a5ad; font-size: 8px; }
 .public-file-preview img, .public-file-preview video { width: 100%; height: 100%; object-fit: contain; background: #050506; }
 .public-image-preview-button { display: block; max-width: 100%; max-height: 100%; padding: 0; border: 0; background: transparent; cursor: zoom-in; }
+.public-file-type-preview { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; width: 100%; height: 100%; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: zoom-in; }
+.public-file-type-preview:hover { color: #ececef; }
 .public-file-preview .file-type-icon { width: auto; height: auto; border: 0; background: transparent; }
 .public-file-preview .file-type-icon.pdf { color: #e6a1a1; }
 .public-file-preview .file-type-icon.archive { color: #e4d59e; }
@@ -152,6 +154,19 @@ a { color: inherit; }
 .image-lightbox-caption { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 14px; min-width: 0; color: #e7e7eb; font-size: 10px; }
 .image-lightbox-caption strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .image-lightbox-caption span { flex: 0 0 auto; color: #92939b; }
+.image-lightbox-caption .icon-button { margin-left: auto; }
+.file-preview-modal { width: min(96vw, 1200px); height: min(92vh, 900px); }
+.file-preview-content { display: grid; flex: 1; min-height: 0; width: 100%; place-items: center; overflow: hidden; border-radius: 5px; background: #08090c; }
+.file-preview-content .loading-line { grid-area: 1 / 1; }
+.file-preview-content .image-lightbox-image { max-width: 100%; max-height: 100%; }
+.file-preview-video, .file-preview-iframe { display: block; width: 100%; height: 100%; min-height: 0; border: 0; background: #08090c; }
+.file-preview-iframe.text { background: #fff; }
+.file-preview-message { display: flex; flex-direction: column; align-items: center; gap: 12px; max-width: 420px; padding: 30px; color: #d7d8df; text-align: center; }
+.file-preview-message > svg { color: #a4a5ad; }
+.file-preview-message > span { color: #92939b; line-height: 1.6; }
+.file-preview-message .button { margin-top: 5px; }
+.file-preview-name { display: block; max-width: 100%; overflow: hidden; padding: 0; border: 0; background: transparent; color: #e7e7eb; font: inherit; font-size: 10px; font-weight: 700; text-align: left; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.file-preview-name:hover { color: #fff; text-decoration: underline; text-underline-offset: 2px; }
 @keyframes image-pop-in { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
@@ -494,6 +509,9 @@ a { color: inherit; }
   .image-lightbox-backdrop { padding: 10px; }
   .image-lightbox { max-width: 100%; padding: 8px; }
   .image-lightbox-image { max-width: calc(100vw - 36px); max-height: calc(82vh - 44px); }
+  .file-preview-modal { width: 100%; height: min(88vh, 760px); }
+  .file-preview-content { min-height: 0; }
+  .file-preview-message { padding: 20px; }
   .image-lightbox-close { top: 12px; right: 12px; }
   .image-lightbox-caption { align-items: flex-start; flex-direction: column; gap: 4px; }
 }
