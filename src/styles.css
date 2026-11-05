@@ -134,8 +134,15 @@ a { color: inherit; }
 .feed-list { display: flex; flex-direction: column; gap: 11px; }
 .public-files-heading { margin-top: 30px; }
 .public-feed-files { display: flex; flex-direction: column; gap: 8px; }
-.public-feed-file { min-height: 60px; display: flex; align-items: center; gap: 11px; padding: 9px 13px; border: 1px solid #292a30; border-radius: 7px; background: #111216; }
+.public-feed-file { min-height: 78px; display: flex; align-items: center; gap: 11px; padding: 9px 13px; border: 1px solid #292a30; border-radius: 7px; background: #111216; }
 .public-feed-file .file-row-name { flex: 1; }
+.public-file-preview { width: 104px; height: 60px; flex: 0 0 104px; display: flex; align-items: center; justify-content: center; gap: 7px; overflow: hidden; border: 1px solid #303138; border-radius: 6px; background: #191a1f; color: #a4a5ad; font-size: 8px; }
+.public-file-preview img, .public-file-preview video { width: 100%; height: 100%; object-fit: cover; background: #050506; }
+.public-file-preview video { object-fit: contain; }
+.public-file-preview .file-type-icon { width: auto; height: auto; border: 0; background: transparent; }
+.public-file-preview .file-type-icon.pdf { color: #e6a1a1; }
+.public-file-preview .file-type-icon.archive { color: #e4d59e; }
+.public-file-preview .file-type-icon.text { color: #a9bded; }
 .post-card { padding: 16px 18px 0; border: 1px solid #292a30; border-radius: 8px; background: #111216; transition: border-color .18s; }
 .post-card:hover { border-color: #3b3c43; }
 .post-header { display: flex; align-items: center; gap: 10px; }

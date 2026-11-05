@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import {
-  ArrowDownToLine, ArrowUpRight, Bell, Check, CircleHelp, Copy, File, FileImage,
-  Film, Folder, Globe2, Home, KeyRound, LayoutDashboard, Link2, LockKeyhole, LogOut,
+  ArrowDownToLine, ArrowUpRight, Bell, Check, CircleHelp, Copy, File, FileArchive, FileImage,
+  FileText, Film, Folder, Globe2, Home, KeyRound, LayoutDashboard, Link2, LockKeyhole, LogOut,
   Menu, MessageCircle, MoreHorizontal, Plus, Search, Send, Settings, Shield, Sparkles, Upload,
   Trash2, Users, X, Youtube, type LucideIcon,
 } from "lucide-react";
@@ -402,13 +402,13 @@ function DashboardPage({ profile, setError }: { profile: Profile; setError: (mes
 }
 
 function PublicFilesFeed({ setError }: { setError: (message: string) => void }) {
-  type PublicFile = { id: string; owner_id: string; name: string; size_bytes: number; created_at: string; storage_path: string; profiles?: { nickname: string } | { nickname: string }[] | null };
+  type PublicFile = { id: string; owner_id: string; name: string; size_bytes: number; mime_type: string; created_at: string; storage_path: string; profiles?: { nickname: string } | { nickname: string }[] | null };
   const [files, setFiles] = useState<PublicFile[]>([]);
   const [loading, setLoading] = useState(true);
   const load = useCallback(async () => {
     if (!supabase) return;
     const { data, error } = await supabase.from("files")
-      .select("id, owner_id, name, size_bytes, created_at, storage_path, profiles!files_owner_id_fkey(nickname)")
+      .select("id, owner_id, name, size_bytes, mime_type, created_at, storage_path, profiles!files_owner_id_fkey(nickname)")
       .eq("visibility", "public")
       .order("created_at", { ascending: false })
       .limit(6);
@@ -428,9 +428,44 @@ function PublicFilesFeed({ setError }: { setError: (message: string) => void }) 
     <div className="section-heading public-files-heading"><div><span className="eyebrow">SHARED WITH COMMUNITY</span><h2>File publik terbaru</h2></div><span className="member-count">{files.length} file</span></div>
     {loading ? <LoadingLine /> : files.length ? <div className="public-feed-files">{files.map((file) => {
       const joinedProfile = Array.isArray(file.profiles) ? file.profiles[0] : file.profiles;
-      return <article className="public-feed-file" key={file.id}><div className="file-type-icon"><File size={18} /></div><div className="file-row-name"><strong>{file.name}</strong><span>{formatBytes(file.size_bytes)} · {dateLabel(file.created_at)} · oleh {joinedProfile?.nickname ?? "Member"}</span></div><span className="visibility-chip public"><Globe2 size={13} />Public</span><button className="icon-button" title={`Unduh ${file.name}`} aria-label={`Unduh ${file.name}`} onClick={() => void download(file)}><ArrowDownToLine size={17} /></button></article>;
+      return <PublicFileCard key={file.id} file={file} ownerName={joinedProfile?.nickname ?? "Member"} onDownload={() => void download(file)} setError={setError} />;
     })}</div> : <EmptyState title="Belum ada file publik" body="File yang diunggah ke Storage dengan visibilitas Public akan muncul di sini." />}
   </>;
+}
+
+function PublicFileCard({ file, ownerName, onDownload, setError }: { file: { id: string; name: string; mime_type: string; size_bytes: number; created_at: string; storage_path: string }; ownerName: string; onDownload: () => void; setError: (message: string) => void }) {
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [previewFailed, setPreviewFailed] = useState(false);
+  const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+  const kind = file.mime_type.startsWith("image/") ? "image"
+    : file.mime_type.startsWith("video/") ? "video"
+      : file.mime_type === "application/pdf" || extension === "pdf" ? "pdf"
+        : file.mime_type === "application/zip" || ["zip", "rar", "7z"].includes(extension) ? "archive"
+          : file.mime_type.startsWith("text/") || ["txt", "md", "log"].includes(extension) ? "text" : "file";
+  useEffect(() => {
+    if ((kind !== "image" && kind !== "video") || !supabase) return;
+    let active = true;
+    supabase.storage.from("member-files").createSignedUrl(file.storage_path, 3600).then(({ data, error }) => {
+      if (!active) return;
+      if (error) setError(error.message);
+      else setPreviewUrl(data.signedUrl);
+    });
+    return () => { active = false; };
+  }, [file.storage_path, kind, setError]);
+  const TypeIcon = kind === "image" ? FileImage : kind === "video" ? Film : kind === "pdf" || kind === "text" ? FileText : kind === "archive" ? FileArchive : File;
+  const typeLabel = kind === "pdf" ? "PDF" : kind === "archive" ? extension.toUpperCase() : kind === "text" ? extension.toUpperCase() || "TEXT" : kind === "video" ? "VIDEO" : kind === "image" ? extension.toUpperCase() : "FILE";
+  return <article className={`public-feed-file ${kind}`}>
+    <div className="public-file-preview">
+      {kind === "image" && previewUrl && !previewFailed
+        ? <img src={previewUrl} alt={`Pratinjau ${file.name}`} loading="lazy" onError={() => setPreviewFailed(true)} />
+        : kind === "video" && previewUrl
+          ? <video src={previewUrl} controls preload="metadata" playsInline aria-label={`Pratinjau ${file.name}`} />
+          : <><div className={`file-type-icon ${kind}`}><TypeIcon size={20} /></div><span>{typeLabel}</span></>}
+    </div>
+    <div className="file-row-name"><strong>{file.name}</strong><span>{typeLabel} · {formatBytes(file.size_bytes)} · {dateLabel(file.created_at)} · oleh {ownerName}</span></div>
+    <span className="visibility-chip public"><Globe2 size={13} />Public</span>
+    <button className="icon-button" title={`Unduh ${file.name}`} aria-label={`Unduh ${file.name}`} onClick={onDownload}><ArrowDownToLine size={17} /></button>
+  </article>;
 }
 
 function MembersPage({ profile, setError }: { profile: Profile; setError: (message: string) => void }) {
