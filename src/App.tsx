@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import {
-  ArrowDownToLine, ArrowUpRight, Bell, Check, CircleHelp, Copy, File, FileArchive, FileImage,
+  ArrowDownToLine, ArrowUpRight, Bell, Check, CircleHelp, Copy, Expand, File, FileArchive, FileImage,
   FileText, Film, Folder, Globe2, Home, KeyRound, LayoutDashboard, Link2, LockKeyhole, LogOut,
   Menu, MessageCircle, MoreHorizontal, Plus, Search, Send, Settings, Shield, Sparkles, Upload,
   Trash2, Users, Volume2, VolumeX, X, Youtube, type LucideIcon,
@@ -489,7 +489,9 @@ function FilePreviewModal({ file, ownerName, onClose }: { file: { name: string; 
   const [url, setUrl] = useState("");
   const [error, setError] = useState("");
   const [volume, setVolume] = useState(1);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const playerRef = useRef<HTMLDivElement>(null);
   const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
   const isImage = file.mime_type.startsWith("image/");
   const isVideo = file.mime_type.startsWith("video/");
@@ -518,6 +520,11 @@ function FilePreviewModal({ file, ownerName, onClose }: { file: { name: string; 
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [onClose]);
+  useEffect(() => {
+    const syncFullscreen = () => setIsFullscreen(document.fullscreenElement === playerRef.current);
+    document.addEventListener("fullscreenchange", syncFullscreen);
+    return () => document.removeEventListener("fullscreenchange", syncFullscreen);
+  }, []);
 
   const download = async () => {
     if (!supabase) return;
@@ -533,6 +540,14 @@ function FilePreviewModal({ file, ownerName, onClose }: { file: { name: string; 
     }
     setVolume(nextVolume);
   };
+  const toggleFullscreen = async () => {
+    try {
+      if (document.fullscreenElement === playerRef.current) await document.exitFullscreen();
+      else await playerRef.current?.requestFullscreen();
+    } catch (fullscreenError) {
+      setError(fullscreenError instanceof Error ? fullscreenError.message : "Mode layar penuh tidak tersedia di browser ini.");
+    }
+  };
 
   const unsupportedPreview = !isImage && !isVideo && !isPdf && !isText;
   return <div className="image-lightbox-backdrop" onClick={onClose}>
@@ -542,7 +557,7 @@ function FilePreviewModal({ file, ownerName, onClose }: { file: { name: string; 
         {!url && !error && <LoadingLine />}
         {error && <div className="file-preview-message"><TypeIcon size={30} /><strong>File tidak dapat dibuka</strong><span>{error.toLowerCase().includes("object not found") ? "Objek file tidak ditemukan di Storage." : error}</span></div>}
         {url && isImage && <img className="image-lightbox-image" src={url} alt={file.name} />}
-        {url && isVideo && <div className="file-video-player"><video ref={videoRef} className="file-preview-video" src={url} controls controlsList="nodownload noplaybackrate noremoteplayback" disablePictureInPicture disableRemotePlayback playsInline onVolumeChange={(event) => setVolume(event.currentTarget.muted ? 0 : event.currentTarget.volume)} /><div className="file-video-volume"><button className="icon-button" type="button" aria-label={volume === 0 ? "Nyalakan suara video" : "Matikan suara video"} title={volume === 0 ? "Nyalakan suara" : "Matikan suara"} onClick={() => setVideoVolume(volume === 0 ? 1 : 0)}>{volume === 0 ? <VolumeX size={17} /> : <Volume2 size={17} />}</button><input type="range" min="0" max="1" step="0.05" value={volume} aria-label="Volume video" onChange={(event) => setVideoVolume(Number(event.target.value))} /><span>{Math.round(volume * 100)}%</span></div></div>}
+        {url && isVideo && <div ref={playerRef} className={`file-video-player ${isFullscreen ? "fullscreen" : ""}`}><video ref={videoRef} className="file-preview-video" src={url} controls controlsList="nodownload noplaybackrate noremoteplayback nofullscreen" disablePictureInPicture disableRemotePlayback playsInline onVolumeChange={(event) => setVolume(event.currentTarget.muted ? 0 : event.currentTarget.volume)} /><div className="file-video-volume"><button className="icon-button" type="button" aria-label={volume === 0 ? "Nyalakan suara video" : "Matikan suara video"} title={volume === 0 ? "Nyalakan suara" : "Matikan suara"} onClick={() => setVideoVolume(volume === 0 ? 1 : 0)}>{volume === 0 ? <VolumeX size={17} /> : <Volume2 size={17} />}</button><input type="range" min="0" max="1" step="0.05" value={volume} aria-label="Volume video" onChange={(event) => setVideoVolume(Number(event.target.value))} /><span>{Math.round(volume * 100)}%</span><button className="icon-button" type="button" aria-label={isFullscreen ? "Keluar dari layar penuh" : "Layar penuh"} title={isFullscreen ? "Keluar layar penuh" : "Layar penuh"} onClick={() => void toggleFullscreen()}><Expand size={17} /></button></div></div>}
         {url && isPdf && <iframe className="file-preview-iframe" src={url} title={`Pratinjau ${file.name}`} />}
         {url && isText && <iframe className="file-preview-iframe text" src={url} title={`Pratinjau ${file.name}`} sandbox="" />}
         {url && unsupportedPreview && <div className="file-preview-message"><TypeIcon size={30} /><strong>Pratinjau tidak tersedia</strong><span>Jenis file ini tidak mendukung pratinjau langsung. Unduh file untuk membukanya.</span><button className="button button-primary" type="button" onClick={() => void download()}><ArrowDownToLine size={15} />Unduh file</button></div>}
