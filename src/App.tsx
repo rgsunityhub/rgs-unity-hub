@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import {
   ArrowDownToLine, ArrowUpRight, Bell, Check, CircleHelp, Copy, File, FileArchive, FileImage,
   FileText, Film, Folder, Globe2, Home, KeyRound, LayoutDashboard, Link2, LockKeyhole, LogOut,
   Menu, MessageCircle, MoreHorizontal, Plus, Search, Send, Settings, Shield, Sparkles, Upload,
-  Trash2, Users, X, Youtube, type LucideIcon,
+  Trash2, Users, Volume2, VolumeX, X, Youtube, type LucideIcon,
 } from "lucide-react";
 import { isSupabaseConfigured, supabase } from "./lib/supabase";
 import type { Page, Profile, Publication, Role } from "./lib/types";
@@ -488,6 +488,8 @@ function PublicFileCard({ file, ownerName, onDownload }: { file: { id: string; n
 function FilePreviewModal({ file, ownerName, onClose }: { file: { name: string; mime_type: string; size_bytes: number; storage_path: string }; ownerName: string; onClose: () => void }) {
   const [url, setUrl] = useState("");
   const [error, setError] = useState("");
+  const [volume, setVolume] = useState(1);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
   const isImage = file.mime_type.startsWith("image/");
   const isVideo = file.mime_type.startsWith("video/");
@@ -523,6 +525,14 @@ function FilePreviewModal({ file, ownerName, onClose }: { file: { name: string; 
     if (downloadError) setError(downloadError.message);
     else window.open(data.signedUrl, "_blank", "noopener,noreferrer");
   };
+  const setVideoVolume = (nextVolume: number) => {
+    const video = videoRef.current;
+    if (video) {
+      video.volume = nextVolume;
+      video.muted = nextVolume === 0;
+    }
+    setVolume(nextVolume);
+  };
 
   const unsupportedPreview = !isImage && !isVideo && !isPdf && !isText;
   return <div className="image-lightbox-backdrop" onClick={onClose}>
@@ -532,7 +542,7 @@ function FilePreviewModal({ file, ownerName, onClose }: { file: { name: string; 
         {!url && !error && <LoadingLine />}
         {error && <div className="file-preview-message"><TypeIcon size={30} /><strong>File tidak dapat dibuka</strong><span>{error.toLowerCase().includes("object not found") ? "Objek file tidak ditemukan di Storage." : error}</span></div>}
         {url && isImage && <img className="image-lightbox-image" src={url} alt={file.name} />}
-        {url && isVideo && <video className="file-preview-video" src={url} controls autoPlay playsInline />}
+        {url && isVideo && <div className="file-video-player"><video ref={videoRef} className="file-preview-video" src={url} controls playsInline onVolumeChange={(event) => setVolume(event.currentTarget.muted ? 0 : event.currentTarget.volume)} /><div className="file-video-volume"><button className="icon-button" type="button" aria-label={volume === 0 ? "Nyalakan suara video" : "Matikan suara video"} title={volume === 0 ? "Nyalakan suara" : "Matikan suara"} onClick={() => setVideoVolume(volume === 0 ? 1 : 0)}>{volume === 0 ? <VolumeX size={17} /> : <Volume2 size={17} />}</button><input type="range" min="0" max="1" step="0.05" value={volume} aria-label="Volume video" onChange={(event) => setVideoVolume(Number(event.target.value))} /><span>{Math.round(volume * 100)}%</span></div></div>}
         {url && isPdf && <iframe className="file-preview-iframe" src={url} title={`Pratinjau ${file.name}`} />}
         {url && isText && <iframe className="file-preview-iframe text" src={url} title={`Pratinjau ${file.name}`} sandbox="" />}
         {url && unsupportedPreview && <div className="file-preview-message"><TypeIcon size={30} /><strong>Pratinjau tidak tersedia</strong><span>Jenis file ini tidak mendukung pratinjau langsung. Unduh file untuk membukanya.</span><button className="button button-primary" type="button" onClick={() => void download()}><ArrowDownToLine size={15} />Unduh file</button></div>}
