@@ -266,7 +266,7 @@ a { color: inherit; }
 .file-row-name { min-width: 0; flex: 1; }
 .file-row-name strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
 .file-row-name span { display: block; color: #797a82; font-size: 8px; margin-top: 4px; }
-.file-row-name .public-file-error { color: #e6a1a1; }
+.file-row-name .public-file-error { margin-top: 7px; padding: 6px 8px; border-left: 2px solid #b75c61; border-radius: 0 4px 4px 0; background: rgba(183,92,97,.1); color: #f0b4b6; font-size: 10px; line-height: 1.45; white-space: normal; overflow-wrap: anywhere; }
 .visibility-chip, .status-chip { display: inline-flex; align-items: center; gap: 4px; border-radius: 4px; font-size: 8px; padding: 5px 7px; text-transform: capitalize; }
 .visibility-chip.public { color: #a6d9ac; background: rgba(101,188,111,.1); }
 .visibility-chip.private { color: #d6d6dc; background: rgba(194,194,204,.1); }
@@ -442,6 +442,13 @@ a { color: inherit; }
   .notification-row { align-items: flex-start; }
   .notification-row .text-button { align-self: center; }
 }
+@media (max-width: 600px) {
+  .public-feed-file { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; grid-template-areas: "preview details details" "preview visibility download"; column-gap: 10px; row-gap: 8px; align-items: center; }
+  .public-feed-file .public-file-preview { grid-area: preview; width: 72px; height: 54px; flex: none; }
+  .public-feed-file .file-row-name { grid-area: details; width: 100%; }
+  .public-feed-file > .visibility-chip { grid-area: visibility; display: inline-flex; justify-self: start; }
+  .public-feed-file > .icon-button { grid-area: download; justify-self: end; }
+}
 @media (max-width: 440px) {
   .auth-brand img { width: 41px; height: 41px; }
   .auth-brand strong { font-size: 16px; }
@@ -467,5 +474,4 @@ a { color: inherit; }
   .visibility-chip { font-size: 7px; padding: 4px; }
   .public-feed-file { gap: 7px; padding: 8px; }
   .public-file-preview { width: 72px; height: 54px; flex-basis: 72px; }
-  .public-feed-file > .visibility-chip { display: none; }
 }

@@ -469,7 +469,7 @@ function PublicFileCard({ file, ownerName, onDownload }: { file: { id: string; n
           ? <video src={previewUrl} controls preload="metadata" playsInline aria-label={`Pratinjau ${file.name}`} onError={() => setFileError("Preview gagal dimuat.")} />
           : <><div className={`file-type-icon ${kind}`}><TypeIcon size={20} /></div><span>{typeLabel}</span></>}
     </div>
-    <div className="file-row-name"><strong>{file.name}</strong><span>{typeLabel} · {formatBytes(file.size_bytes)} · {dateLabel(file.created_at)} · oleh {ownerName}</span>{fileError && <span className="public-file-error">{missingObject ? "Objek file tidak ditemukan. Pemilik perlu mengunggah ulang file melalui Storage." : `File tidak dapat dimuat: ${fileError}`}</span>}</div>
+    <div className="file-row-name"><strong>{file.name}</strong><span>{typeLabel} · {formatBytes(file.size_bytes)} · {dateLabel(file.created_at)} · oleh {ownerName}</span>{fileError && <span className="public-file-error" role="status">{missingObject ? "File tidak tersedia. Pemilik perlu menghapus entri lama di Storage, lalu mengunggah ulang file." : `File tidak dapat dimuat: ${fileError}`}</span>}</div>
     <span className="visibility-chip public"><Globe2 size={13} />Public</span>
     <button className="icon-button" title={`Unduh ${file.name}`} aria-label={`Unduh ${file.name}`} onClick={() => void handleDownload()}><ArrowDownToLine size={17} /></button>
   </article>;
