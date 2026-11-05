@@ -438,6 +438,7 @@ function PublicFileCard({ file, ownerName, onDownload }: { file: { id: string; n
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewFailed, setPreviewFailed] = useState(false);
   const [fileError, setFileError] = useState("");
+  const [imagePreviewOpen, setImagePreviewOpen] = useState(false);
   const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
   const kind = file.mime_type.startsWith("image/") ? "image"
     : file.mime_type.startsWith("video/") ? "video"
@@ -454,6 +455,14 @@ function PublicFileCard({ file, ownerName, onDownload }: { file: { id: string; n
     });
     return () => { active = false; };
   }, [file.storage_path, kind]);
+  useEffect(() => {
+    if (!imagePreviewOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setImagePreviewOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [imagePreviewOpen]);
   const TypeIcon = kind === "image" ? FileImage : kind === "video" ? Film : kind === "pdf" || kind === "text" ? FileText : kind === "archive" ? FileArchive : File;
   const typeLabel = kind === "pdf" ? "PDF" : kind === "archive" ? extension.toUpperCase() : kind === "text" ? extension.toUpperCase() || "TEXT" : kind === "video" ? "VIDEO" : kind === "image" ? extension.toUpperCase() : "FILE";
   const missingObject = fileError.toLowerCase().includes("object not found");
@@ -464,11 +473,18 @@ function PublicFileCard({ file, ownerName, onDownload }: { file: { id: string; n
   return <article className={`public-feed-file ${kind}`}>
     <div className="public-file-preview">
       {kind === "image" && previewUrl && !previewFailed
-        ? <img src={previewUrl} alt={`Pratinjau ${file.name}`} loading="lazy" onError={() => { setPreviewFailed(true); setFileError("Preview gagal dimuat."); }} />
+        ? <button className="public-image-preview-button" type="button" aria-label={`Perbesar gambar ${file.name}`} title="Klik untuk memperbesar" onClick={() => setImagePreviewOpen(true)}><img src={previewUrl} alt={`Pratinjau ${file.name}`} loading="lazy" onError={() => { setPreviewFailed(true); setFileError("Preview gagal dimuat."); }} /></button>
         : kind === "video" && previewUrl
           ? <video src={previewUrl} controls preload="metadata" playsInline aria-label={`Pratinjau ${file.name}`} onError={() => setFileError("Preview gagal dimuat.")} />
           : <><div className={`file-type-icon ${kind}`}><TypeIcon size={20} /></div><span>{typeLabel}</span></>}
     </div>
+    {imagePreviewOpen && previewUrl && <div className="image-lightbox-backdrop" onClick={() => setImagePreviewOpen(false)}>
+      <section className="image-lightbox" role="dialog" aria-modal="true" aria-label={`Pratinjau gambar ${file.name}`} onClick={(event) => event.stopPropagation()}>
+        <button className="image-lightbox-close icon-button" type="button" aria-label="Tutup pratinjau gambar" onClick={() => setImagePreviewOpen(false)}><X size={20} /></button>
+        <img className="image-lightbox-image" src={previewUrl} alt={file.name} />
+        <div className="image-lightbox-caption"><strong>{file.name}</strong><span>{formatBytes(file.size_bytes)} · oleh {ownerName}</span></div>
+      </section>
+    </div>}
     <div className="file-row-name"><strong>{file.name}</strong><span>{typeLabel} · {formatBytes(file.size_bytes)} · {dateLabel(file.created_at)} · oleh {ownerName}</span>{fileError && <span className="public-file-error" role="status">{missingObject ? "File tidak tersedia. Pemilik perlu menghapus entri lama di Storage, lalu mengunggah ulang file." : `File tidak dapat dimuat: ${fileError}`}</span>}</div>
     <span className="visibility-chip public"><Globe2 size={13} />Public</span>
     <button className="icon-button" title={`Unduh ${file.name}`} aria-label={`Unduh ${file.name}`} onClick={() => void handleDownload()}><ArrowDownToLine size={17} /></button>
