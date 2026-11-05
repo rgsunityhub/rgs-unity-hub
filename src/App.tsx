@@ -515,7 +515,8 @@ function YouTubePage({ profile, setError }: { profile: Profile; setError: (messa
   const [videos, setVideos] = useState<Publication[]>([]);
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
-  const [visibility, setVisibility] = useState("public");
+  const [visibility, setVisibility] = useState<"public" | "private">("public");
+  const [visibilityBusyId, setVisibilityBusyId] = useState<string | null>(null);
   const load = useCallback(async () => {
     if (!supabase) return;
     const { data, error } = await supabase.from("publications").select("*, profiles!publications_owner_id_fkey(nickname, avatar_url, role)").eq("kind", "youtube").order("created_at", { ascending: false });
@@ -535,11 +536,26 @@ function YouTubePage({ profile, setError }: { profile: Profile; setError: (messa
     const { error } = await supabase.from("publications").delete().eq("id", id);
     if (error) setError(error.message); else await load();
   };
+  const toggleVideoVisibility = async (video: Publication) => {
+    if (!supabase || video.owner_id !== profile.id || visibilityBusyId) return;
+    const nextVisibility = video.visibility === "public" ? "private" : "public";
+    setVisibilityBusyId(video.id);
+    const { error } = await supabase.from("publications")
+      .update({ visibility: nextVisibility })
+      .eq("id", video.id)
+      .eq("owner_id", profile.id)
+      .eq("kind", "youtube")
+      .select("id")
+      .single();
+    if (error) setError(error.message);
+    else await load();
+    setVisibilityBusyId(null);
+  };
   return <>
     <PageHeading eyebrow="RGS VIDEO CHANNEL" title={<>YouTube<span className="title-dot">.</span></>} subtitle="Temukan video pilihan dan bagikan momen gaming kamu." />
-    <form className="youtube-add" onSubmit={addVideo}><div className="youtube-add-heading"><div className="youtube-icon"><Youtube size={20} /></div><div><strong>Bagikan video YouTube</strong><span>Video akan diputar melalui YouTube Embed resmi.</span></div></div><div className="youtube-form-fields"><input value={url} onChange={(event) => setUrl(event.target.value)} placeholder="Tempel URL YouTube..." aria-label="URL YouTube" required /><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Judul video (opsional)" aria-label="Judul video" /><select className="filter-select" value={visibility} onChange={(event) => setVisibility(event.target.value)}><option value="public">Public</option><option value="private">Private</option></select><button className="button button-primary"><Plus size={16} /> Tambahkan</button></div><div className="converter-note"><CircleHelp size={14} /> Converter/download video tidak disediakan. Tonton atau buka video melalui YouTube sesuai ketentuan layanan.</div></form>
+    <form className="youtube-add" onSubmit={addVideo}><div className="youtube-add-heading"><div className="youtube-icon"><Youtube size={20} /></div><div><strong>Bagikan video YouTube</strong><span>Video Public terlihat semua anggota; Private hanya terlihat oleh kamu.</span></div></div><div className="youtube-form-fields"><input value={url} onChange={(event) => setUrl(event.target.value)} placeholder="Tempel URL YouTube..." aria-label="URL YouTube" required /><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Judul video (opsional)" aria-label="Judul video" /><select className="filter-select" value={visibility} onChange={(event) => setVisibility(event.target.value === "private" ? "private" : "public")}><option value="public">Public</option><option value="private">Private</option></select><button className="button button-primary"><Plus size={16} /> Tambahkan</button></div><div className="converter-note"><CircleHelp size={14} /> Converter/download video tidak disediakan. Tonton atau buka video melalui YouTube sesuai ketentuan layanan.</div></form>
     <div className="section-heading"><div><span className="eyebrow">CURATED BY MEMBERS</span><h2>Video komunitas</h2></div><span className="member-count">{videos.length} video</span></div>
-    <div className="video-grid">{videos.filter((video) => video.visibility === "public" || video.owner_id === profile.id).map((video) => { const videoId = getYouTubeVideoId(video.body); return <article className="video-card" key={video.id}><div className="video-frame">{videoId ? <YouTubePlayer videoId={videoId} title={video.title} /> : <div className="video-unavailable"><Film size={28} /></div>}</div>{videoId && <div className="video-card-link"><YouTubeWatchLink videoId={videoId} /></div>}<div className="video-info"><div><h3>{video.title}</h3><span>oleh {video.profiles?.nickname ?? "Member"} · {dateLabel(video.created_at)}</span></div><span className={`visibility-chip ${video.visibility}`}>{video.visibility === "public" ? <Globe2 size={13} /> : <LockKeyhole size={13} />}{video.visibility}</span>{video.owner_id === profile.id && <button className="icon-button" title="Hapus publikasi" onClick={() => void deleteVideo(video.id)}><X size={16} /></button>}</div></article>; })}</div>
+    <div className="video-grid">{videos.filter((video) => video.visibility === "public" || video.owner_id === profile.id).map((video) => { const videoId = getYouTubeVideoId(video.body); return <article className="video-card" key={video.id}><div className="video-frame">{videoId ? <YouTubePlayer videoId={videoId} title={video.title} /> : <div className="video-unavailable"><Film size={28} /></div>}</div>{videoId && <div className="video-card-link"><YouTubeWatchLink videoId={videoId} /></div>}<div className="video-info"><div><h3>{video.title}</h3><span>oleh {video.profiles?.nickname ?? "Member"} · {dateLabel(video.created_at)}</span></div>{video.owner_id === profile.id ? <button className={`visibility-chip ${video.visibility} visibility-toggle`} disabled={visibilityBusyId === video.id} onClick={() => void toggleVideoVisibility(video)} title={`Ubah menjadi ${video.visibility === "public" ? "Private" : "Public"}`} aria-label={`${video.title}: ${video.visibility}. Ubah menjadi ${video.visibility === "public" ? "Private" : "Public"}`}>{video.visibility === "public" ? <Globe2 size={13} /> : <LockKeyhole size={13} />}{visibilityBusyId === video.id ? "Menyimpan..." : video.visibility}</button> : <span className={`visibility-chip ${video.visibility}`}>{video.visibility === "public" ? <Globe2 size={13} /> : <LockKeyhole size={13} />}{video.visibility}</span>}{video.owner_id === profile.id && <button className="icon-button" title="Hapus publikasi" onClick={() => void deleteVideo(video.id)}><X size={16} /></button>}</div></article>; })}</div>
     {!videos.length && <EmptyState title="Belum ada video" body="Jadilah yang pertama membagikan video YouTube komunitas." />}
   </>;
 }
