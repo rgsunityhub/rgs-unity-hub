@@ -652,7 +652,6 @@ a { color: inherit; }
   .mobile-menu,
   .sidebar-brand,
   .workspace-label,
-  .sidebar-bottom,
   .mobile-overlay {
     display: none;
   }
@@ -709,6 +708,24 @@ a { color: inherit; }
   }
   .main-column {
     padding-bottom: 68px;
+  }
+  .sidebar-bottom {
+    position: fixed;
+    top: 12px;
+    right: 46px;
+    z-index: 5;
+    margin: 0;
+  }
+  .community-card {
+    display: none;
+  }
+  .sidebar-user {
+    padding: 0;
+    border: 0;
+  }
+  .sidebar-user .user-meta,
+  .sidebar-user > .icon-button {
+    display: none;
   }
   .page-container {
     padding-bottom: 24px;
