@@ -490,6 +490,24 @@ a { color: inherit; }
   .members-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .youtube-form-fields { grid-template-columns: 1fr 1fr; }
 }
+@media (min-width: 761px) and (max-width: 1449px) {
+  .sidebar-brand {
+    display: none;
+  }
+  .sidebar-user {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    right: 14px;
+    z-index: 7;
+    width: auto;
+    padding: 0 3px;
+    border-top: 0;
+  }
+  .workspace-label {
+    padding-top: 66px;
+  }
+}
 @media (max-width: 760px) {
   .auth-page { padding: 19px 20px 20px; }
   .auth-content { display: flex; flex-direction: column; align-items: stretch; gap: 28px; padding: 52px 0 40px; }
