@@ -61,7 +61,7 @@ function normalizePublications(rows: unknown): Publication[] {
 function useRealtimeRefresh(channelName: string, tables: readonly string[], refresh: () => void | Promise<void>, filter?: string, setError?: (message: string) => void) {
   useEffect(() => {
     if (!supabase) return;
-    let channel = supabase.channel(channelName);
+    let channel = supabase.channel(`${channelName}-${crypto.randomUUID()}`);
     for (const table of tables) {
       channel = channel.on("postgres_changes", { event: "*", schema: "public", table, ...(filter ? { filter } : {}) }, () => {
         void refresh();
