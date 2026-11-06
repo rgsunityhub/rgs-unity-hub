@@ -497,7 +497,7 @@ a { color: inherit; }
   .sidebar-user {
     position: absolute;
     top: 14px;
-    left: 14px;
+    left: auto;
     right: 14px;
     z-index: 7;
     width: auto;
