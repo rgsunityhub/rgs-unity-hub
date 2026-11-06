@@ -18,5 +18,5 @@ export interface Publication {
   body: string;
   visibility: "public" | "private";
   created_at: string;
-  profiles?: Pick<Profile, "nickname" | "avatar_url" | "role"> | null;
+  profiles?: Pick<Profile, "id" | "nickname" | "avatar_url" | "role"> | null;
 }
