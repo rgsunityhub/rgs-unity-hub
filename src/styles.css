@@ -651,13 +651,27 @@ a { color: inherit; }
     left: 14px;
     bottom: 14px;
     z-index: 6;
-    width: 218px;
+    width: 248px;
     flex: 0 0 auto;
     margin: 0;
   }
   .community-card {
-    display: block;
-    padding: 10px;
+    min-height: 68px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+  }
+  .community-notification-button {
+    width: 36px;
+    height: 36px;
+    flex-basis: 36px;
+  }
+  .community-card strong {
+    font-size: 12px;
+  }
+  .community-card span {
+    font-size: 8px;
   }
   .sidebar-user {
     display: none;
