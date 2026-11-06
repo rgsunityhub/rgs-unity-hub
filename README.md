@@ -18,6 +18,8 @@ Community hub responsive untuk RGS. Frontend dibuat dengan React + TypeScript + 
 │   └── lib/
 │       ├── supabase.ts                  # Client memakai publishable/anon key
 │       └── types.ts
+├── android/                             # Project aplikasi Android Capacitor
+├── capacitor.config.ts
 ├── supabase/
 │   ├── config.toml
 │   ├── schema.sql                       # Tabel, trigger, RPC, RLS, buckets
@@ -153,6 +155,26 @@ Deployment production: [https://rgs-unity-hub.vercel.app](https://rgs-unity-hub.
 ## Instal sebagai aplikasi (PWA)
 
 RGS Unity Hub dapat dipasang dari browser sebagai aplikasi di Android, iPhone/iPad, dan desktop. Buka URL production melalui HTTPS, lalu pilih **Pasang aplikasi** jika tombol pemasangan tersedia. Jika tidak ada prompt otomatis, gunakan menu browser: di Android/desktop pilih **Instal aplikasi** atau **Tambahkan ke layar utama**; di iPhone/iPad Safari pilih **Bagikan → Tambahkan ke Layar Utama**. Pastikan ikon aplikasi muncul di layar utama setelah pemasangan. Fitur offline menyimpan shell aplikasi; login, data komunitas, dan file memerlukan koneksi internet.
+
+## Aplikasi Android native (APK)
+
+Project Android native dibuat dengan Capacitor dan membuka build React lokal di dalam aplikasi Android; pengguna memasang APK, bukan memasang dari menu browser. Backend dan akun tetap menggunakan Supabase yang sama. Dibutuhkan Android Studio dengan Android SDK Platform 36 serta Java/JDK 21.
+
+1. Install Android Studio dan pastikan Android SDK Platform 36 tersedia di **SDK Manager**.
+2. Dari folder project, jalankan:
+
+   ```powershell
+   npm install
+   npm run android:sync
+   npm run android:open
+   ```
+
+3. Di Android Studio pilih **Build → Build Bundle(s) / APK(s) → Build APK(s)**. APK debug tersedia di `android/app/build/outputs/apk/debug/app-debug.apk`; pindahkan file tersebut ke perangkat Android untuk memasangnya.
+4. Untuk distribusi publik/Google Play, buat dan simpan signing key milik pemilik aplikasi, lalu build APK/AAB release bertanda tangan. Jangan commit signing key atau password-nya.
+
+Workflow **Build Android APK** juga membuat APK debug otomatis setelah perubahan terkait masuk ke branch `main`; file dapat diunduh pada bagian **Artifacts** di halaman run GitHub Actions. Pastikan repository memiliki secrets `VITE_SUPABASE_URL` dan `VITE_SUPABASE_ANON_KEY`, sama seperti workflow GitHub Pages.
+
+Untuk perubahan UI berikutnya, jalankan lagi `npm run android:sync` sebelum membuka atau membangun project Android. Push notification native dan distribusi iOS memerlukan konfigurasi native terpisah; keduanya tidak otomatis disediakan oleh APK ini. Build web/type-check bisa dilakukan dengan `npm run build`.
 
 ## Deploy ke GitHub Pages
 

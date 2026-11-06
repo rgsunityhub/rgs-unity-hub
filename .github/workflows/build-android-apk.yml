@@ -1,0 +1,67 @@
+name: Build Android APK
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/build-android-apk.yml"
+      - "android/**"
+      - "capacitor.config.ts"
+      - "index.html"
+      - "package.json"
+      - "package-lock.json"
+      - "public/**"
+      - "src/**"
+      - "tsconfig*.json"
+      - "vite.config.ts"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK Platform 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web assets and sync Android
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: npm run android:sync
+
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: rgs-unity-hub-android-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14

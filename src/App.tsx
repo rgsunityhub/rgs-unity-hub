@@ -5,6 +5,7 @@ import {
   Menu, MessageCircle, Minus, MoreHorizontal, Music, Plus, RefreshCw, Search, Send, Settings, Shield, Sparkles, Image as ImageIcon, Upload,
   Trash2, Users, Volume2, VolumeX, X, Youtube, type LucideIcon,
 } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
 import { isSupabaseConfigured, supabase } from "./lib/supabase";
 import InstallAppButton from "./components/InstallAppButton";
 import type { Page, Profile, Publication, Role } from "./lib/types";
@@ -203,7 +204,8 @@ function AuthPage({ configured, onAuthenticated }: { configured: boolean; onAuth
         if (authData.session) onAuthenticated(authData.session);
       } else {
         const email = String(form.get("email") ?? "").trim();
-        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+        const redirectTo = Capacitor.isNativePlatform() ? "https://rgsunityhub.github.io" : window.location.origin;
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
         if (resetError) throw resetError;
         setMessage("Jika email terdaftar, tautan reset akan dikirim oleh Supabase Auth.");
       }

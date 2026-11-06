@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Download } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -12,6 +13,7 @@ function isAppInstalled() {
 }
 
 export default function InstallAppButton() {
+  const [nativeApp] = useState(Capacitor.isNativePlatform);
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(isAppInstalled);
   const [help, setHelp] = useState("");
@@ -35,7 +37,7 @@ export default function InstallAppButton() {
     };
   }, []);
 
-  if (installed) return null;
+  if (nativeApp || installed) return null;
 
   const install = async () => {
     if (!installPrompt) {
