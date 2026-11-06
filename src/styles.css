@@ -134,6 +134,10 @@ a { color: inherit; }
 .feed-list { display: flex; flex-direction: column; gap: 11px; }
 .public-files-heading { margin-top: 30px; }
 .public-feed-files { display: flex; flex-direction: column; gap: 8px; }
+.public-file-entry { overflow: hidden; border: 1px solid #292a30; border-radius: 7px; background: #111216; }
+.public-file-entry .public-feed-file { border: 0; border-radius: 0; }
+.public-file-entry > .post-actions { padding: 0 13px; }
+.public-file-entry > .comments-panel { margin: 0 13px; }
 .public-feed-file { min-height: 78px; display: flex; align-items: center; gap: 11px; padding: 9px 13px; border: 1px solid #292a30; border-radius: 7px; background: #111216; }
 .public-feed-file .file-row-name { flex: 1; }
 .public-file-preview { width: 104px; height: 60px; flex: 0 0 104px; display: flex; align-items: center; justify-content: center; gap: 7px; overflow: hidden; border: 1px solid #303138; border-radius: 6px; background: #191a1f; color: #a4a5ad; font-size: 8px; }
@@ -304,6 +308,10 @@ a { color: inherit; }
 .upload-button input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
 .storage-toolbar { margin-top: 20px; }
 .file-list { border: 1px solid #292a30; border-radius: 8px; overflow: hidden; }
+.storage-file-entry { border-bottom: 1px solid #25262b; }
+.storage-file-entry:last-child { border-bottom: 0; }
+.storage-file-entry > .post-actions { padding: 0 13px; background: #111216; }
+.storage-file-entry > .comments-panel { margin: 0 13px; }
 .file-row { min-height: 61px; display: flex; align-items: center; gap: 11px; padding: 9px 13px; background: #111216; border-bottom: 1px solid #25262b; }
 .file-row:last-child { border-bottom: 0; }
 .storage-file-preview { width: 42px; height: 42px; flex: 0 0 42px; display: flex; align-items: center; justify-content: center; gap: 3px; overflow: hidden; padding: 2px; border: 1px solid #303138; border-radius: 6px; background: #191a1f; color: #a4a5ad; cursor: pointer; }
@@ -350,6 +358,8 @@ a { color: inherit; }
 .video-info h3 { margin: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 10px; }
 .video-info span { color: #82838b; font-size: 8px; }
 .video-info .visibility-chip { flex: 0 0 auto; }
+.video-card > .post-actions { padding: 0 12px; }
+.video-card > .comments-panel { margin: 0 12px; }
 
 .chat-panel { height: min(600px, calc(100vh - 230px)); min-height: 390px; border: 1px solid #2a2b31; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; background: #111216; }
 .chat-header { min-height: 57px; display: flex; align-items: center; gap: 10px; padding: 0 14px; border-bottom: 1px solid #292a30; }

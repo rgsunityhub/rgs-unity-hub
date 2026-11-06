@@ -84,6 +84,7 @@ const FILE_TABLE = ["files"] as const;
 const PUBLICATION_TABLE = ["publications", "profiles"] as const;
 const NOTIFICATION_TABLE = ["notifications"] as const;
 const ENGAGEMENT_TABLES = ["publication_reactions", "publication_comments"] as const;
+const FILE_ENGAGEMENT_TABLES = ["file_reactions", "file_comments"] as const;
 
 function App() {
   const [session, setSession] = useState<Awaited<ReturnType<NonNullable<typeof supabase>["auth"]["getSession"]>>["data"]["session"]>(null);
@@ -331,7 +332,7 @@ function HomePage({ profile, setError }: { profile: Profile; setError: (message:
     {compose && <form className="compose-card" onSubmit={publish}><Field label="Judul publikasi" name="title" placeholder="Apa yang ingin kamu bagikan?" maxLength={100} required /><label className="field"><span>Cerita kamu</span><textarea name="body" placeholder="Tulis sesuatu untuk komunitas..." maxLength={2000} rows={3} required /></label><div className="compose-footer"><span><Globe2 size={14} /> Publik — terlihat oleh semua member</span><button className="button button-primary"><Send size={15} /> Publikasikan</button></div></form>}
     <div className="feed-toolbar"><div className="feed-tabs"><button className="active">Terbaru</button></div><label className="search-box"><Search size={16} /><input placeholder="Cari publikasi..." value={search} onChange={(event) => setSearch(event.target.value)} /></label></div>
     <section className="feed-list">{loading ? <LoadingLine /> : filtered.length ? filtered.map((post) => <PublicationCard key={post.id} post={post} profileId={profile.id} onDelete={load} setError={setError} />) : <EmptyState title="Belum ada publikasi" body="Jadilah yang pertama membagikan kabar ke komunitas RGS." />}</section>
-    <PublicFilesFeed setError={setError} />
+    <PublicFilesFeed profileId={profile.id} setError={setError} />
     <div className="feed-footer">Menampilkan publikasi publik komunitas <span>RGS UNITY HUB</span></div>
   </>;
 }
@@ -397,11 +398,11 @@ function DashboardPage({ profile, setError }: { profile: Profile; setError: (mes
     <section className="stats-grid">{stats.map(({ label, value, icon: Icon, tone, note }) => <div className="stat-card" key={label}><div className={`stat-icon ${tone}`}><Icon size={18} /></div><span className="stat-label">{label}</span><strong>{value.toLocaleString("id-ID")}</strong><small>{note}</small></div>)}</section>
     <div className="section-heading"><div><span className="eyebrow">COMMUNITY PULSE</span><h2>Aktivitas terbaru</h2></div><span className="live-tag"><i /> LIVE FEED</span></div>
     <div className="feed-list">{recent.length ? recent.map((post) => <PublicationCard key={post.id} post={post} profileId={profile.id} onDelete={load} setError={setError} />) : <EmptyState title="Ruang masih tenang" body="Publikasi terbaru akan muncul di sini." />}</div>
-    <PublicFilesFeed setError={setError} />
+    <PublicFilesFeed profileId={profile.id} setError={setError} />
   </>;
 }
 
-function PublicFilesFeed({ setError }: { setError: (message: string) => void }) {
+function PublicFilesFeed({ profileId, setError }: { profileId: string; setError: (message: string) => void }) {
   type PublicFile = { id: string; owner_id: string; name: string; size_bytes: number; mime_type: string; created_at: string; storage_path: string; profiles?: { nickname: string } | { nickname: string }[] | null };
   const [files, setFiles] = useState<PublicFile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -429,12 +430,12 @@ function PublicFilesFeed({ setError }: { setError: (message: string) => void }) 
     <div className="section-heading public-files-heading"><div><span className="eyebrow">SHARED WITH COMMUNITY</span><h2>File publik terbaru</h2></div><span className="member-count">{files.length} file</span></div>
     {loading ? <LoadingLine /> : files.length ? <div className="public-feed-files">{files.map((file) => {
       const joinedProfile = Array.isArray(file.profiles) ? file.profiles[0] : file.profiles;
-      return <PublicFileCard key={file.id} file={file} ownerName={joinedProfile?.nickname ?? "Member"} onDownload={() => download(file)} />;
+      return <PublicFileCard key={file.id} file={file} profileId={profileId} ownerName={joinedProfile?.nickname ?? "Member"} onDownload={() => download(file)} setError={setError} />;
     })}</div> : <EmptyState title="Belum ada file publik" body="File yang diunggah ke Storage dengan visibilitas Public akan muncul di sini." />}
   </>;
 }
 
-function PublicFileCard({ file, ownerName, onDownload }: { file: { id: string; name: string; mime_type: string; size_bytes: number; created_at: string; storage_path: string }; ownerName: string; onDownload: () => Promise<string | null> }) {
+function PublicFileCard({ file, profileId, ownerName, onDownload, setError }: { file: { id: string; name: string; mime_type: string; size_bytes: number; created_at: string; storage_path: string }; profileId: string; ownerName: string; onDownload: () => Promise<string | null>; setError: (message: string) => void }) {
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewFailed, setPreviewFailed] = useState(false);
   const [fileError, setFileError] = useState("");
@@ -470,7 +471,7 @@ function PublicFileCard({ file, ownerName, onDownload }: { file: { id: string; n
     const error = await onDownload();
     if (error) setFileError(error);
   };
-  return <article className={`public-feed-file ${kind}`}>
+  return <div className="public-file-entry"><article className={`public-feed-file ${kind}`}>
     <div className="public-file-preview">
       {kind === "image" && previewUrl && !previewFailed
         ? <button className="public-image-preview-button" type="button" aria-label={`Perbesar gambar ${file.name}`} title="Klik untuk memperbesar" onClick={() => setPreviewOpen(true)}><img src={previewUrl} alt={`Pratinjau ${file.name}`} loading="lazy" onError={() => { setPreviewFailed(true); setFileError("Preview gagal dimuat."); }} /></button>
@@ -482,7 +483,7 @@ function PublicFileCard({ file, ownerName, onDownload }: { file: { id: string; n
     <div className="file-row-name"><button className="file-preview-name" type="button" onClick={() => setPreviewOpen(true)}>{file.name}</button><span>{typeLabel} · {formatBytes(file.size_bytes)} · {dateLabel(file.created_at)} · oleh {ownerName}</span>{fileError && <span className="public-file-error" role="status">{missingObject ? "File tidak tersedia. Pemilik perlu menghapus entri lama di Storage, lalu mengunggah ulang file." : `File tidak dapat dimuat: ${fileError}`}</span>}</div>
     <span className="visibility-chip public"><Globe2 size={13} />Public</span>
     <button className="icon-button" title={`Unduh ${file.name}`} aria-label={`Unduh ${file.name}`} onClick={() => void handleDownload()}><ArrowDownToLine size={17} /></button>
-  </article>;
+  </article><Engagement targetType="file" targetId={file.id} profileId={profileId} setError={setError} /></div>;
 }
 
 function FilePreviewModal({ file, ownerName, onClose }: { file: { name: string; mime_type: string; size_bytes: number; storage_path: string }; ownerName: string; onClose: () => void }) {
@@ -709,10 +710,10 @@ function StoragePage({ profile, setError }: { profile: Profile; setError: (messa
     <div className="storage-summary"><div className="storage-summary-icon"><Folder size={21} /></div><div><span>Storage pribadi</span><strong>{formatBytes(used)} <small>digunakan</small></strong></div><div className="storage-progress"><i style={{ width: `${Math.min(used / (1024 * 1024 * 1024) * 100, 100)}%` }} /></div><small>Batas upload per file: 25 MB</small></div>
     <form className="upload-panel" onSubmit={upload}><div className="upload-icon"><Upload size={19} /></div><div className="upload-copy"><strong>Upload file baru</strong><span>Public dapat dilihat dan diunduh anggota; Private hanya terlihat oleh kamu.</span></div><select className="filter-select" name="visibility" defaultValue="private" disabled={busy}><option value="private">Private</option><option value="public">Public</option></select><label className="button button-primary upload-button"><Upload size={16} />{busy ? "Mengunggah..." : "Pilih file"}<input name="upload" type="file" accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm,application/pdf,text/plain,application/zip" required disabled={busy} /></label><button className="button button-outline" disabled={busy}>Upload</button></form>
     <div className="members-toolbar storage-toolbar"><label className="search-box"><Search size={16} /><input placeholder="Cari file..." value={query} onChange={(event) => setQuery(event.target.value)} /></label><span className="member-count">{files.length} file</span></div>
-    <div className="file-list">{filtered.map((file) => <div className="file-row" key={file.id}><StorageFilePreview file={file} onOpen={() => setPreviewFile(file)} /><div className="file-row-name"><button className="file-preview-name" type="button" onClick={() => setPreviewFile(file)}>{file.name}</button><span>{formatBytes(file.size_bytes)} · {dateLabel(file.created_at)}</span></div><button className={`visibility-chip ${file.visibility} visibility-toggle`} disabled={visibilityBusyId === file.id} onClick={() => void toggleVisibility(file)} title={`Ubah menjadi ${file.visibility === "public" ? "Private" : "Public"}`} aria-label={`${file.name}: ${file.visibility}. Ubah menjadi ${file.visibility === "public" ? "Private" : "Public"}`}>{file.visibility === "public" ? <Globe2 size={13} /> : <LockKeyhole size={13} />}{visibilityBusyId === file.id ? "Menyimpan..." : file.visibility}</button><div className="file-actions"><button className="icon-button" title="Unduh" onClick={() => void download(file.storage_path)}><ArrowDownToLine size={17} /></button><button className="icon-button" title="Hapus" onClick={() => void remove(file)}><X size={17} /></button></div></div>)}</div>
+    <div className="file-list">{filtered.map((file) => <div className="storage-file-entry" key={file.id}><div className="file-row"><StorageFilePreview file={file} onOpen={() => setPreviewFile(file)} /><div className="file-row-name"><button className="file-preview-name" type="button" onClick={() => setPreviewFile(file)}>{file.name}</button><span>{formatBytes(file.size_bytes)} · {dateLabel(file.created_at)}</span></div><button className={`visibility-chip ${file.visibility} visibility-toggle`} disabled={visibilityBusyId === file.id} onClick={() => void toggleVisibility(file)} title={`Ubah menjadi ${file.visibility === "public" ? "Private" : "Public"}`} aria-label={`${file.name}: ${file.visibility}. Ubah menjadi ${file.visibility === "public" ? "Private" : "Public"}`}>{file.visibility === "public" ? <Globe2 size={13} /> : <LockKeyhole size={13} />}{visibilityBusyId === file.id ? "Menyimpan..." : file.visibility}</button><div className="file-actions"><button className="icon-button" title="Unduh" onClick={() => void download(file.storage_path)}><ArrowDownToLine size={17} /></button><button className="icon-button" title="Hapus" onClick={() => void remove(file)}><X size={17} /></button></div></div><Engagement targetType="file" targetId={file.id} profileId={profile.id} setError={setError} /></div>)}</div>
     {!filtered.length && <EmptyState title="Belum ada file" body="Upload file pertamamu untuk mulai menggunakan storage." />}
     <div className="section-heading"><div><span className="eyebrow">SHARED WITH COMMUNITY</span><h2>File publik</h2></div><span className="member-count">{sharedFiles.length} file</span></div>
-    <div className="file-list">{sharedFiles.filter((file) => file.name.toLowerCase().includes(query.toLowerCase())).map((file) => { const joinedProfile = Array.isArray(file.profiles) ? file.profiles[0] : file.profiles; return <div className="file-row" key={file.id}><StorageFilePreview file={file} onOpen={() => setPreviewFile(file)} /><div className="file-row-name"><button className="file-preview-name" type="button" onClick={() => setPreviewFile(file)}>{file.name}</button><span>{formatBytes(file.size_bytes)} · {dateLabel(file.created_at)} · oleh {joinedProfile?.nickname ?? "Member"}</span></div>{file.owner_id === profile.id ? <button className="visibility-chip public visibility-toggle" disabled={visibilityBusyId === file.id} onClick={() => void toggleVisibility(file)} title="Ubah menjadi Private" aria-label={`${file.name}: Public. Ubah menjadi Private`}><Globe2 size={13} />{visibilityBusyId === file.id ? "Menyimpan..." : "Public"}</button> : <span className="visibility-chip public"><Globe2 size={13} />Public</span>}<div className="file-actions"><button className="icon-button" title={`Unduh ${file.name}`} onClick={() => void download(file.storage_path)}><ArrowDownToLine size={17} /></button></div></div>; })}</div>
+    <div className="file-list">{sharedFiles.filter((file) => file.name.toLowerCase().includes(query.toLowerCase())).map((file) => { const joinedProfile = Array.isArray(file.profiles) ? file.profiles[0] : file.profiles; return <div className="storage-file-entry" key={file.id}><div className="file-row"><StorageFilePreview file={file} onOpen={() => setPreviewFile(file)} /><div className="file-row-name"><button className="file-preview-name" type="button" onClick={() => setPreviewFile(file)}>{file.name}</button><span>{formatBytes(file.size_bytes)} · {dateLabel(file.created_at)} · oleh {joinedProfile?.nickname ?? "Member"}</span></div>{file.owner_id === profile.id ? <button className="visibility-chip public visibility-toggle" disabled={visibilityBusyId === file.id} onClick={() => void toggleVisibility(file)} title="Ubah menjadi Private" aria-label={`${file.name}: Public. Ubah menjadi Private`}><Globe2 size={13} />{visibilityBusyId === file.id ? "Menyimpan..." : "Public"}</button> : <span className="visibility-chip public"><Globe2 size={13} />Public</span>}<div className="file-actions"><button className="icon-button" title={`Unduh ${file.name}`} onClick={() => void download(file.storage_path)}><ArrowDownToLine size={17} /></button></div></div><Engagement targetType="file" targetId={file.id} profileId={profile.id} setError={setError} /></div>; })}</div>
     {!sharedFiles.some((file) => file.name.toLowerCase().includes(query.toLowerCase())) && <EmptyState title="Belum ada file publik" body="File yang diunggah dengan visibilitas Public akan muncul di sini." />}
     {previewFile && <FilePreviewModal file={previewFile} ownerName={previewFile.owner_id === profile.id ? profile.nickname : (Array.isArray(previewFile.profiles) ? previewFile.profiles[0]?.nickname : previewFile.profiles?.nickname) ?? "Member"} onClose={() => setPreviewFile(null)} />}
   </>;
@@ -762,7 +763,7 @@ function YouTubePage({ profile, setError }: { profile: Profile; setError: (messa
     <PageHeading eyebrow="RGS VIDEO CHANNEL" title={<>YouTube<span className="title-dot">.</span></>} subtitle="Temukan video pilihan dan bagikan momen gaming kamu." />
     <form className="youtube-add" onSubmit={addVideo}><div className="youtube-add-heading"><div className="youtube-icon"><Youtube size={20} /></div><div><strong>Bagikan video YouTube</strong><span>Video Public terlihat semua anggota; Private hanya terlihat oleh kamu.</span></div></div><div className="youtube-form-fields"><input value={url} onChange={(event) => setUrl(event.target.value)} placeholder="Tempel URL YouTube..." aria-label="URL YouTube" required /><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Judul video (opsional)" aria-label="Judul video" /><select className="filter-select" value={visibility} onChange={(event) => setVisibility(event.target.value === "private" ? "private" : "public")}><option value="public">Public</option><option value="private">Private</option></select><button className="button button-primary"><Plus size={16} /> Tambahkan</button></div><div className="converter-note"><CircleHelp size={14} /> Converter/download video tidak disediakan. Tonton atau buka video melalui YouTube sesuai ketentuan layanan.</div></form>
     <div className="section-heading"><div><span className="eyebrow">CURATED BY MEMBERS</span><h2>Video komunitas</h2></div><span className="member-count">{videos.length} video</span></div>
-    <div className="video-grid">{videos.filter((video) => video.visibility === "public" || video.owner_id === profile.id).map((video) => { const videoId = getYouTubeVideoId(video.body); return <article className="video-card" key={video.id}><div className="video-frame">{videoId ? <YouTubePlayer videoId={videoId} title={video.title} /> : <div className="video-unavailable"><Film size={28} /></div>}</div>{videoId && <div className="video-card-link"><YouTubeWatchLink videoId={videoId} /></div>}<div className="video-info"><div><h3>{video.title}</h3><span>oleh {video.profiles?.nickname ?? "Member"} · {dateLabel(video.created_at)}</span></div>{video.owner_id === profile.id ? <button className={`visibility-chip ${video.visibility} visibility-toggle`} disabled={visibilityBusyId === video.id} onClick={() => void toggleVideoVisibility(video)} title={`Ubah menjadi ${video.visibility === "public" ? "Private" : "Public"}`} aria-label={`${video.title}: ${video.visibility}. Ubah menjadi ${video.visibility === "public" ? "Private" : "Public"}`}>{video.visibility === "public" ? <Globe2 size={13} /> : <LockKeyhole size={13} />}{visibilityBusyId === video.id ? "Menyimpan..." : video.visibility}</button> : <span className={`visibility-chip ${video.visibility}`}>{video.visibility === "public" ? <Globe2 size={13} /> : <LockKeyhole size={13} />}{video.visibility}</span>}{video.owner_id === profile.id && <button className="icon-button" title="Hapus publikasi" onClick={() => void deleteVideo(video.id)}><X size={16} /></button>}</div></article>; })}</div>
+    <div className="video-grid">{videos.filter((video) => video.visibility === "public" || video.owner_id === profile.id).map((video) => { const videoId = getYouTubeVideoId(video.body); return <article className="video-card" key={video.id}><div className="video-frame">{videoId ? <YouTubePlayer videoId={videoId} title={video.title} /> : <div className="video-unavailable"><Film size={28} /></div>}</div>{videoId && <div className="video-card-link"><YouTubeWatchLink videoId={videoId} /></div>}<div className="video-info"><div><h3>{video.title}</h3><span>oleh {video.profiles?.nickname ?? "Member"} · {dateLabel(video.created_at)}</span></div>{video.owner_id === profile.id ? <button className={`visibility-chip ${video.visibility} visibility-toggle`} disabled={visibilityBusyId === video.id} onClick={() => void toggleVideoVisibility(video)} title={`Ubah menjadi ${video.visibility === "public" ? "Private" : "Public"}`} aria-label={`${video.title}: ${video.visibility}. Ubah menjadi ${video.visibility === "public" ? "Private" : "Public"}`}>{video.visibility === "public" ? <Globe2 size={13} /> : <LockKeyhole size={13} />}{visibilityBusyId === video.id ? "Menyimpan..." : video.visibility}</button> : <span className={`visibility-chip ${video.visibility}`}>{video.visibility === "public" ? <Globe2 size={13} /> : <LockKeyhole size={13} />}{video.visibility}</span>}{video.owner_id === profile.id && <button className="icon-button" title="Hapus publikasi" onClick={() => void deleteVideo(video.id)}><X size={16} /></button>}</div><Engagement targetType="publication" targetId={video.id} profileId={profile.id} setError={setError} /></article>; })}</div>
     {!videos.length && <EmptyState title="Belum ada video" body="Jadilah yang pertama membagikan video YouTube komunitas." />}
   </>;
 }
@@ -905,12 +906,6 @@ function SettingsPage() {
 }
 
 function PublicationCard({ post, profileId, onDelete, setError }: { post: Publication; profileId: string; onDelete: () => void | Promise<void>; setError: (message: string) => void }) {
-  const [liked, setLiked] = useState(false);
-  const [likes, setLikes] = useState(0);
-  const [commentCount, setCommentCount] = useState(0);
-  const [commentsOpen, setCommentsOpen] = useState(false);
-  const [comments, setComments] = useState<Array<{ id: string; body: string; created_at: string; nickname: string }>>([]);
-  const [commentText, setCommentText] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const canDelete = post.owner_id === profileId;
 
@@ -930,25 +925,41 @@ function PublicationCard({ post, profileId, onDelete, setError }: { post: Public
     await onDelete();
   };
 
+  const videoId = post.kind === "youtube" ? getYouTubeVideoId(post.body) : null;
+  return <article className="post-card" id={`publication-${post.id}`}><header className="post-header"><Avatar profile={{ nickname: post.profiles?.nickname ?? "Member", avatar_url: post.profiles?.avatar_url ?? null }} /><div className="post-author"><strong>{post.profiles?.nickname ?? "Member"} <RoleBadge role={post.profiles?.role ?? "user"} /></strong><span>{dateLabel(post.created_at)} · {post.kind === "youtube" ? "Video YouTube" : "Publikasi"}</span></div><div className="post-menu-wrap"><button className="icon-button post-more" aria-label={`Opsi publikasi ${post.title}`} aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}><MoreHorizontal size={19} /></button>{menuOpen && <div className="post-menu" role="menu"><button role="menuitem" onClick={() => void copyLink()}><Copy size={14} />Salin tautan</button>{canDelete && <button className="danger-action" role="menuitem" onClick={() => void deletePublication()}><Trash2 size={14} />Hapus publikasi</button>}</div>}</div></header><div className="post-content"><h3>{post.title}</h3>{videoId ? <><div className="post-video-frame"><YouTubePlayer videoId={videoId} title={post.title} /></div><YouTubeWatchLink videoId={videoId} /></> : <p>{post.body}</p>}</div><Engagement targetType="publication" targetId={post.id} profileId={profileId} setError={setError} /></article>;
+}
+
+function Engagement({ targetType, targetId, profileId, setError }: { targetType: "publication" | "file"; targetId: string; profileId: string; setError: (message: string) => void }) {
+  const [liked, setLiked] = useState(false);
+  const [likes, setLikes] = useState(0);
+  const [commentCount, setCommentCount] = useState(0);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [comments, setComments] = useState<Array<{ id: string; body: string; created_at: string; nickname: string }>>([]);
+  const [commentText, setCommentText] = useState("");
+  const targetColumn = targetType === "publication" ? "publication_id" : "file_id";
+  const reactionTable = targetType === "publication" ? "publication_reactions" : "file_reactions";
+  const commentTable = targetType === "publication" ? "publication_comments" : "file_comments";
+  const tables = targetType === "publication" ? ENGAGEMENT_TABLES : FILE_ENGAGEMENT_TABLES;
+
   const refreshCounts = useCallback(async () => {
     if (!supabase) return;
     const [reactions, ownReaction, count] = await Promise.all([
-      supabase.from("publication_reactions").select("user_id", { count: "exact", head: true }).eq("publication_id", post.id),
-      supabase.from("publication_reactions").select("user_id").eq("publication_id", post.id).eq("user_id", profileId).maybeSingle(),
-      supabase.from("publication_comments").select("id", { count: "exact", head: true }).eq("publication_id", post.id),
+      supabase.from(reactionTable).select("user_id", { count: "exact", head: true }).eq(targetColumn, targetId),
+      supabase.from(reactionTable).select("user_id").eq(targetColumn, targetId).eq("user_id", profileId).maybeSingle(),
+      supabase.from(commentTable).select("id", { count: "exact", head: true }).eq(targetColumn, targetId),
     ]);
     const error = reactions.error ?? ownReaction.error ?? count.error;
     if (error) { setError(error.message); return; }
     setLikes(reactions.count ?? 0);
     setLiked(Boolean(ownReaction.data));
     setCommentCount(count.count ?? 0);
-  }, [post.id, profileId, setError]);
+  }, [commentTable, profileId, reactionTable, setError, targetColumn, targetId]);
 
   useEffect(() => { void refreshCounts(); }, [refreshCounts]);
 
   const loadComments = useCallback(async () => {
     if (!supabase) return;
-    const { data, error } = await supabase.from("publication_comments").select("id, body, created_at, profiles(nickname)").eq("publication_id", post.id).order("created_at", { ascending: true }).limit(50);
+    const { data, error } = await supabase.from(commentTable).select("id, body, created_at, profiles(nickname)").eq(targetColumn, targetId).order("created_at", { ascending: true }).limit(50);
     if (error) { setError(error.message); return; }
     const normalized = (data ?? []).flatMap((value) => {
       const row = value as unknown as Record<string, unknown>;
@@ -959,18 +970,19 @@ function PublicationCard({ post, profileId, onDelete, setError }: { post: Public
     });
     setComments(normalized);
     setCommentCount(normalized.length);
-  }, [post.id, setError]);
+  }, [commentTable, setError, targetColumn, targetId]);
+
   const refreshEngagement = useCallback(async () => {
     await refreshCounts();
     if (commentsOpen) await loadComments();
   }, [commentsOpen, loadComments, refreshCounts]);
-  useRealtimeRefresh(`rgs-engagement-${post.id}`, ENGAGEMENT_TABLES, refreshEngagement, `publication_id=eq.${post.id}`, setError);
+  useRealtimeRefresh(`rgs-engagement-${targetType}-${targetId}`, tables, refreshEngagement, `${targetColumn}=eq.${targetId}`, setError);
 
   const toggleLike = async () => {
     if (!supabase) return;
     const response = liked
-      ? await supabase.from("publication_reactions").delete().eq("publication_id", post.id).eq("user_id", profileId)
-      : await supabase.from("publication_reactions").insert({ publication_id: post.id, user_id: profileId });
+      ? await supabase.from(reactionTable).delete().eq(targetColumn, targetId).eq("user_id", profileId)
+      : await supabase.from(reactionTable).insert({ [targetColumn]: targetId, user_id: profileId });
     if (response.error) setError(response.error.message);
     else await refreshCounts();
   };
@@ -978,13 +990,12 @@ function PublicationCard({ post, profileId, onDelete, setError }: { post: Public
   const addComment = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!supabase || !commentText.trim()) return;
-    const { error } = await supabase.from("publication_comments").insert({ publication_id: post.id, user_id: profileId, body: commentText.trim() });
+    const { error } = await supabase.from(commentTable).insert({ [targetColumn]: targetId, user_id: profileId, body: commentText.trim() });
     if (error) setError(error.message);
     else { setCommentText(""); await loadComments(); }
   };
 
-  const videoId = post.kind === "youtube" ? getYouTubeVideoId(post.body) : null;
-  return <article className="post-card" id={`publication-${post.id}`}><header className="post-header"><Avatar profile={{ nickname: post.profiles?.nickname ?? "Member", avatar_url: post.profiles?.avatar_url ?? null }} /><div className="post-author"><strong>{post.profiles?.nickname ?? "Member"} <RoleBadge role={post.profiles?.role ?? "user"} /></strong><span>{dateLabel(post.created_at)} · {post.kind === "youtube" ? "Video YouTube" : "Publikasi"}</span></div><div className="post-menu-wrap"><button className="icon-button post-more" aria-label={`Opsi publikasi ${post.title}`} aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}><MoreHorizontal size={19} /></button>{menuOpen && <div className="post-menu" role="menu"><button role="menuitem" onClick={() => void copyLink()}><Copy size={14} />Salin tautan</button>{canDelete && <button className="danger-action" role="menuitem" onClick={() => void deletePublication()}><Trash2 size={14} />Hapus publikasi</button>}</div>}</div></header><div className="post-content"><h3>{post.title}</h3>{videoId ? <><div className="post-video-frame"><YouTubePlayer videoId={videoId} title={post.title} /></div><YouTubeWatchLink videoId={videoId} /></> : <p>{post.body}</p>}</div><footer className="post-actions"><button className={`post-action ${liked ? "reacted" : ""}`} aria-label={liked ? "Batalkan apresiasi" : "Beri apresiasi"} onClick={() => void toggleLike()}><Sparkles size={16} /><span>Apresiasi {likes ? likes : ""}</span></button><button className="post-action" aria-expanded={commentsOpen} onClick={() => { const next = !commentsOpen; setCommentsOpen(next); if (next) void loadComments(); }}><MessageCircle size={16} /><span>Diskusi {commentCount ? commentCount : ""}</span></button><span className="public-label"><Globe2 size={13} /> PUBLIC</span></footer>{commentsOpen && <section className="comments-panel"><div className="comments-list">{comments.map((comment) => <div className="comment-row" key={comment.id}><strong>{comment.nickname}</strong><span>{comment.body}</span><time>{new Date(comment.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</time></div>)}{!comments.length && <span className="comments-empty">Belum ada diskusi. Mulai percakapan yang baik.</span>}</div><form className="comment-form" onSubmit={addComment}><input value={commentText} onChange={(event) => setCommentText(event.target.value)} placeholder="Tulis komentar..." maxLength={1000} /><button className="icon-button" disabled={!commentText.trim()} aria-label="Kirim komentar"><Send size={15} /></button></form></section>}</article>;
+  return <><footer className="post-actions"><button className={`post-action ${liked ? "reacted" : ""}`} aria-label={liked ? "Batalkan apresiasi" : "Beri apresiasi"} onClick={() => void toggleLike()}><Sparkles size={16} /><span>Apresiasi {likes ? likes : ""}</span></button><button className="post-action" aria-expanded={commentsOpen} onClick={() => { const next = !commentsOpen; setCommentsOpen(next); if (next) void loadComments(); }}><MessageCircle size={16} /><span>Diskusi {commentCount ? commentCount : ""}</span></button></footer>{commentsOpen && <section className="comments-panel"><div className="comments-list">{comments.map((comment) => <div className="comment-row" key={comment.id}><strong>{comment.nickname}</strong><span>{comment.body}</span><time>{new Date(comment.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</time></div>)}{!comments.length && <span className="comments-empty">Belum ada diskusi. Mulai percakapan yang baik.</span>}</div><form className="comment-form" onSubmit={addComment}><input value={commentText} onChange={(event) => setCommentText(event.target.value)} placeholder="Tulis komentar..." maxLength={1000} /><button className="icon-button" disabled={!commentText.trim()} aria-label="Kirim komentar"><Send size={15} /></button></form></section>}</>;
 }
 
 function YouTubePlayer({ videoId, title }: { videoId: string; title: string }) {

@@ -64,6 +64,22 @@ create table public.files (
   constraint file_path_matches_owner check (storage_path like owner_id::text || '/%')
 );
 
+create table public.file_reactions (
+  file_id uuid not null references public.files(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (file_id, user_id)
+);
+
+create table public.file_comments (
+  id uuid primary key default gen_random_uuid(),
+  file_id uuid not null references public.files(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  body text not null check (char_length(body) between 1 and 1000),
+  created_at timestamptz not null default now()
+);
+create index file_comments_time on public.file_comments (file_id, created_at);
+
 create table public.chat_rooms (
   id uuid primary key default gen_random_uuid(),
   name text not null check (char_length(name) between 1 and 80),
@@ -244,6 +260,8 @@ alter table public.publications enable row level security;
 alter table public.publication_reactions enable row level security;
 alter table public.publication_comments enable row level security;
 alter table public.files enable row level security;
+alter table public.file_reactions enable row level security;
+alter table public.file_comments enable row level security;
 alter table public.chat_rooms enable row level security;
 alter table public.chat_room_members enable row level security;
 alter table public.chat_messages enable row level security;
@@ -302,6 +320,35 @@ create policy "Members comment on visible publications" on public.publication_co
     )
   );
 create policy "Members delete own comments" on public.publication_comments
+  for delete to authenticated using (user_id = (select auth.uid()));
+
+create policy "Members read engagement on visible files" on public.file_reactions
+  for select to authenticated using (exists (
+    select 1 from public.files f
+    where f.id = file_id and (f.visibility = 'public' or f.owner_id = (select auth.uid()))
+  ));
+create policy "Members react to visible files" on public.file_reactions
+  for insert to authenticated with check (
+    user_id = (select auth.uid()) and exists (
+      select 1 from public.files f
+      where f.id = file_id and (f.visibility = 'public' or f.owner_id = (select auth.uid()))
+    )
+  );
+create policy "Members remove own file reactions" on public.file_reactions
+  for delete to authenticated using (user_id = (select auth.uid()));
+create policy "Members read comments on visible files" on public.file_comments
+  for select to authenticated using (exists (
+    select 1 from public.files f
+    where f.id = file_id and (f.visibility = 'public' or f.owner_id = (select auth.uid()))
+  ));
+create policy "Members comment on visible files" on public.file_comments
+  for insert to authenticated with check (
+    user_id = (select auth.uid()) and exists (
+      select 1 from public.files f
+      where f.id = file_id and (f.visibility = 'public' or f.owner_id = (select auth.uid()))
+    )
+  );
+create policy "Members delete own file comments" on public.file_comments
   for delete to authenticated using (user_id = (select auth.uid()));
 
 create policy "Public and own file metadata" on public.files
@@ -396,6 +443,8 @@ grant select, insert, update, delete on public.publications to authenticated;
 grant select, insert, delete on public.publication_reactions to authenticated;
 grant select, insert, delete on public.publication_comments to authenticated;
 grant select, insert, update, delete on public.files to authenticated;
+grant select, insert, delete on public.file_reactions to authenticated;
+grant select, insert, delete on public.file_comments to authenticated;
 grant select on public.chat_rooms, public.chat_room_members to authenticated;
 grant select, insert, delete on public.chat_messages to authenticated;
 grant select, update on public.notifications to authenticated;
@@ -411,6 +460,8 @@ begin
     'publication_reactions',
     'publication_comments',
     'files',
+    'file_reactions',
+    'file_comments',
     'invite_codes',
     'notifications',
     'chat_messages'
