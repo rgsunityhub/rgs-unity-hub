@@ -497,6 +497,10 @@ a { color: inherit; }
   .sidebar-brand {
     display: none;
   }
+  .topbar .top-avatar,
+  .topbar .notification-button {
+    display: none;
+  }
   .sidebar-user {
     position: fixed;
     top: 14px;
