@@ -58,7 +58,7 @@ jobs:
 
       - name: Build debug APK
         working-directory: android
-        run: ./gradlew assembleDebug
+        run: bash ./gradlew assembleDebug
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
