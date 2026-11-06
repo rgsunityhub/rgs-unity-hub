@@ -1,6 +1,13 @@
 alter table public.notifications add column if not exists actor_id uuid references public.profiles(id) on delete set null;
 alter table public.notifications add column if not exists source_key text;
 create index if not exists notifications_source_key on public.notifications (source_key);
+delete from public.notifications duplicated
+using public.notifications original
+where duplicated.source_key is not null
+  and duplicated.source_key = original.source_key
+  and duplicated.ctid > original.ctid;
+create unique index if not exists notifications_unique_source_key
+  on public.notifications (source_key) where source_key is not null;
 
 create or replace function public.notify_publication_reaction()
 returns trigger language plpgsql security definer set search_path = ''
@@ -106,3 +113,16 @@ create trigger file_reaction_notification_removed after delete on public.file_re
 drop trigger if exists file_comment_notification_removed on public.file_comments;
 create trigger file_comment_notification_removed after delete on public.file_comments
   for each row execute function public.remove_file_comment_notification();
+
+drop trigger if exists publication_reaction_notification on public.publication_reactions;
+create trigger publication_reaction_notification after insert on public.publication_reactions
+  for each row execute function public.notify_publication_reaction();
+drop trigger if exists publication_comment_notification on public.publication_comments;
+create trigger publication_comment_notification after insert on public.publication_comments
+  for each row execute function public.notify_publication_comment();
+drop trigger if exists file_reaction_notification on public.file_reactions;
+create trigger file_reaction_notification after insert on public.file_reactions
+  for each row execute function public.notify_file_reaction();
+drop trigger if exists file_comment_notification on public.file_comments;
+create trigger file_comment_notification after insert on public.file_comments
+  for each row execute function public.notify_file_comment();
