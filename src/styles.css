@@ -712,15 +712,19 @@ a { color: inherit; }
   }
   .sidebar-bottom {
     position: fixed;
-    top: 12px;
-    right: 46px;
+    top: 68px;
+    left: 12px;
     z-index: 5;
+    display: block;
+    width: 180px;
     margin: 0;
   }
   .community-card {
+    display: block;
+  }
+  .sidebar-user {
     display: none;
   }
-  .sidebar-bottom { display: none; }
   .mobile-logout-button { display: inline-grid; }
   .topbar-actions { margin-left: auto; }
   .page-container {
