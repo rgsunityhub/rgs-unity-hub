@@ -459,11 +459,12 @@ function PublicFileCard({ file, profileId, ownerId, ownerName, onOpenProfile, on
   const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
   const kind = file.mime_type.startsWith("image/") ? "image"
     : file.mime_type.startsWith("video/") ? "video"
+      : file.mime_type.startsWith("audio/") || ["mp3", "wav", "ogg", "m4a", "aac", "flac"].includes(extension) ? "audio"
       : file.mime_type === "application/pdf" || extension === "pdf" ? "pdf"
         : file.mime_type === "application/zip" || ["zip", "rar", "7z"].includes(extension) ? "archive"
           : file.mime_type.startsWith("text/") || ["txt", "md", "log"].includes(extension) ? "text" : "file";
   useEffect(() => {
-    if ((kind !== "image" && kind !== "video") || !supabase) return;
+    if ((kind !== "image" && kind !== "video" && kind !== "audio") || !supabase) return;
     let active = true;
     supabase.storage.from("member-files").createSignedUrl(file.storage_path, 3600).then(({ data, error }) => {
       if (!active) return;
@@ -508,10 +509,12 @@ function FilePreviewModal({ file, ownerName, onClose }: { file: { name: string; 
   const [volume, setVolume] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const playerRef = useRef<HTMLDivElement>(null);
   const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
   const isImage = file.mime_type.startsWith("image/");
   const isVideo = file.mime_type.startsWith("video/");
+  const isAudio = file.mime_type.startsWith("audio/") || ["mp3", "wav", "ogg", "m4a", "aac", "flac"].includes(extension);
   const isPdf = file.mime_type === "application/pdf" || extension === "pdf";
   const isText = file.mime_type.startsWith("text/") || ["txt", "md", "log"].includes(extension);
   const TypeIcon = isImage ? FileImage : isVideo ? Film : isPdf || isText ? FileText : ["zip", "rar", "7z"].includes(extension) ? FileArchive : File;
@@ -557,6 +560,14 @@ function FilePreviewModal({ file, ownerName, onClose }: { file: { name: string; 
     }
     setVolume(nextVolume);
   };
+  const setAudioVolume = (nextVolume: number) => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.volume = nextVolume;
+      audio.muted = nextVolume === 0;
+    }
+    setVolume(nextVolume);
+  };
   const toggleFullscreen = async () => {
     try {
       if (document.fullscreenElement === playerRef.current) await document.exitFullscreen();
@@ -566,7 +577,7 @@ function FilePreviewModal({ file, ownerName, onClose }: { file: { name: string; 
     }
   };
 
-  const unsupportedPreview = !isImage && !isVideo && !isPdf && !isText;
+  const unsupportedPreview = !isImage && !isVideo && !isAudio && !isPdf && !isText;
   return <div className="image-lightbox-backdrop" onClick={onClose}>
     <section className="image-lightbox file-preview-modal" role="dialog" aria-modal="true" aria-label={`Pratinjau file ${file.name}`} onClick={(event) => event.stopPropagation()}>
       <button className="image-lightbox-close icon-button" type="button" aria-label="Tutup pratinjau file" onClick={onClose}><X size={20} /></button>
@@ -575,6 +586,7 @@ function FilePreviewModal({ file, ownerName, onClose }: { file: { name: string; 
         {error && <div className="file-preview-message"><TypeIcon size={30} /><strong>File tidak dapat dibuka</strong><span>{error.toLowerCase().includes("object not found") ? "Objek file tidak ditemukan di Storage." : error}</span></div>}
         {url && isImage && <img className="image-lightbox-image" src={url} alt={file.name} />}
         {url && isVideo && <div ref={playerRef} className={`file-video-player ${isFullscreen ? "fullscreen" : ""}`}><video ref={videoRef} className="file-preview-video" src={url} controls controlsList="nodownload noplaybackrate noremoteplayback nofullscreen" disablePictureInPicture disableRemotePlayback playsInline onVolumeChange={(event) => setVolume(event.currentTarget.muted ? 0 : event.currentTarget.volume)} /><div className="file-video-volume"><button className="icon-button" type="button" aria-label={volume === 0 ? "Nyalakan suara video" : "Matikan suara video"} title={volume === 0 ? "Nyalakan suara" : "Matikan suara"} onClick={() => setVideoVolume(volume === 0 ? 1 : 0)}>{volume === 0 ? <VolumeX size={17} /> : <Volume2 size={17} />}</button><input type="range" min="0" max="1" step="0.05" value={volume} aria-label="Volume video" onChange={(event) => setVideoVolume(Number(event.target.value))} /><span>{Math.round(volume * 100)}%</span><button className="icon-button" type="button" aria-label={isFullscreen ? "Keluar dari layar penuh" : "Layar penuh"} title={isFullscreen ? "Keluar layar penuh" : "Layar penuh"} onClick={() => void toggleFullscreen()}><Expand size={17} /></button></div></div>}
+        {url && isAudio && <div ref={playerRef} className={`file-video-player file-audio-player ${isFullscreen ? "fullscreen" : ""}`}><audio ref={audioRef} className="file-preview-video" src={url} controls controlsList="nodownload noplaybackrate noremoteplayback" preload="metadata" onVolumeChange={(event) => setVolume(event.currentTarget.muted ? 0 : event.currentTarget.volume)} /><div className="file-video-volume"><button className="icon-button" type="button" aria-label={volume === 0 ? "Nyalakan suara audio" : "Matikan suara audio"} title={volume === 0 ? "Nyalakan suara" : "Matikan suara"} onClick={() => setAudioVolume(volume === 0 ? 1 : 0)}>{volume === 0 ? <VolumeX size={17} /> : <Volume2 size={17} />}</button><input type="range" min="0" max="1" step="0.05" value={volume} aria-label="Volume audio" onChange={(event) => setAudioVolume(Number(event.target.value))} /><span>{Math.round(volume * 100)}%</span><button className="icon-button" type="button" aria-label={isFullscreen ? "Keluar dari layar penuh" : "Layar penuh"} title={isFullscreen ? "Keluar layar penuh" : "Layar penuh"} onClick={() => void toggleFullscreen()}><Expand size={17} /></button></div></div>}
         {url && isPdf && <iframe className="file-preview-iframe" src={url} title={`Pratinjau ${file.name}`} />}
         {url && isText && <iframe className="file-preview-iframe text" src={url} title={`Pratinjau ${file.name}`} sandbox="" />}
         {url && unsupportedPreview && <div className="file-preview-message"><TypeIcon size={30} /><strong>Pratinjau tidak tersedia</strong><span>Jenis file ini tidak mendukung pratinjau langsung. Unduh file untuk membukanya.</span><button className="button button-primary" type="button" onClick={() => void download()}><ArrowDownToLine size={15} />Unduh file</button></div>}
