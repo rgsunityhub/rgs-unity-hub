@@ -832,6 +832,9 @@ a { color: inherit; }
     display: block;
     min-height: 58px;
   }
+  .mobile-community-card .community-notification-button {
+    display: none;
+  }
   .sidebar-user {
     display: none;
   }
