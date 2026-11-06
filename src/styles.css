@@ -23,7 +23,7 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 a { color: inherit; }
 ::selection { color: #0a0a0c; background: #fff; }
 
-.auth-page { min-height: 100vh; padding: 0; display: flex; flex-direction: column; position: relative; overflow: hidden; background: #090a0c url("/login-background.png?v=restored-199b6eb") center center / cover no-repeat; }
+.auth-page { min-height: 100vh; padding: 0; display: flex; flex-direction: column; position: relative; overflow: hidden; background: #090a0c url("/login-background.png") center center / cover no-repeat; }
 .auth-backdrop { display: none; }
 .auth-brand { display: none; }
 .sidebar-brand { display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; }
