@@ -951,9 +951,15 @@ function NotificationsPage({ setError }: { setError: (message: string) => void }
     if (error) return;
     setNotifications((current) => current.map((item) => item.id === id ? { ...item, read_at: new Date().toISOString() } : item));
   };
+  const deleteNotification = async (id: string) => {
+    if (!supabase) return;
+    const { error } = await supabase.from("notifications").delete().eq("id", id);
+    if (error) setError(error.message);
+    else setNotifications((current) => current.filter((item) => item.id !== id));
+  };
   return <>
     <PageHeading eyebrow="STAY IN THE LOOP" title={<>Notifications<span className="title-dot">.</span></>} subtitle="Pemberitahuan penting dari aktivitas komunitas." />
-    <div className="notification-list">{notifications.map((item) => <article className={`notification-row ${item.read_at ? "" : "unread"}`} key={item.id}><div className="notification-icon"><Bell size={17} /></div><div><strong>{item.title}</strong><p>{item.body}</p><time>{dateLabel(item.created_at)}</time></div>{!item.read_at && <button className="text-button" onClick={() => void markRead(item.id)}>Tandai dibaca</button>}</article>)}</div>
+    <div className="notification-list">{notifications.map((item) => <article className={`notification-row ${item.read_at ? "" : "unread"}`} key={item.id}><div className="notification-icon"><Bell size={17} /></div><div><strong>{item.title}</strong><p>{item.body}</p><time>{dateLabel(item.created_at)}</time></div><div className="notification-actions">{!item.read_at && <button className="text-button" onClick={() => void markRead(item.id)}>Tandai dibaca</button>}<button className="icon-button notification-delete" type="button" onClick={() => void deleteNotification(item.id)} aria-label={`Hapus notifikasi ${item.title}`} title="Hapus notifikasi"><Trash2 size={16} /></button></div></article>)}</div>
     {!notifications.length && <EmptyState title="Semua tenang di sini" body="Notifikasi komunitas akan muncul di halaman ini." />}
   </>;
 }

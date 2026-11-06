@@ -462,6 +462,8 @@ create policy "Users read own notifications" on public.notifications
 create policy "Users mark own notifications read" on public.notifications
   for update to authenticated using (user_id = (select auth.uid()))
   with check (user_id = (select auth.uid()));
+create policy "Users delete own notifications" on public.notifications
+  for delete to authenticated using (user_id = (select auth.uid()));
 
 create policy "Users request own password reset" on public.password_reset_requests
   for insert to authenticated with check (user_id = (select auth.uid()));

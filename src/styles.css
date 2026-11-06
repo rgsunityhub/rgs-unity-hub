@@ -459,6 +459,9 @@ a { color: inherit; }
 .notification-row p { margin: 4px 0; color: #91929a; font-size: 9px; }
 .notification-row time { color: #71727b; font-size: 8px; }
 .notification-row .text-button { margin: 0; white-space: nowrap; }
+.notification-actions { display: flex; align-items: center; gap: 5px; flex: 0 0 auto; }
+.notification-delete { color: #777984; }
+.notification-delete:hover { color: #ef6b75; border-color: #ef6b75; }
 .settings-card { display: flex; align-items: center; gap: 12px; padding: 15px; border: 1px solid #292a30; border-radius: 8px; background: #111216; margin-bottom: 9px; }
 .settings-icon { display: grid; place-items: center; width: 35px; height: 35px; color: #c9c9cf; background: #202127; border-radius: 6px; }
 .settings-card > div:nth-child(2) { flex: 1; }
