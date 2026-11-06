@@ -744,6 +744,7 @@ a { color: inherit; }
   }
   .community-card {
     display: block;
+    min-height: 58px;
   }
   .sidebar-user {
     display: none;
@@ -751,6 +752,7 @@ a { color: inherit; }
   .mobile-logout-button { display: inline-grid; }
   .topbar-actions { margin-left: auto; }
   .page-container {
+    padding-top: 108px;
     padding-bottom: 24px;
   }
 }
