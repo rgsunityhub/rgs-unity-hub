@@ -2,7 +2,7 @@
 
 Community hub responsive untuk RGS. Frontend dibuat dengan React + TypeScript + Vite; autentikasi, PostgreSQL, file storage, RLS, dan realtime menggunakan Supabase. Website statis dapat di-host di Vercel Hobby tanpa watermark.
 
-> **Status:** project Supabase `stdxeimphibosmhkhzvr` sudah dibuat; schema database dan Edge Function login sudah diterapkan, dan konfigurasi lokal sudah disambungkan. Website sudah di-deploy ke [rgs-unity-hub.vercel.app](https://rgs-unity-hub.vercel.app), dan Site URL serta Redirect URL Supabase untuk domain tersebut sudah dikonfigurasi. Source tersimpan di repository GitHub private [rgsunityhub/rgs-unity-hub](https://github.com/rgsunityhub/rgs-unity-hub), yang terhubung ke project Vercel dengan auto-deploy dari branch `main`. Fitur yang belum tersedia dicatat di bagian [Cakupan saat ini](#cakupan-saat-ini), jadi ini bukan klaim bahwa semua fitur permintaan sudah selesai.
+> **Status:** project Supabase `stdxeimphibosmhkhzvr` sudah dibuat; schema database dan Edge Function login sudah diterapkan, dan konfigurasi lokal sudah disambungkan. Website sudah di-deploy ke [rgs-unity-hub.vercel.app](https://rgs-unity-hub.vercel.app), dan Site URL serta Redirect URL Supabase untuk domain tersebut sudah dikonfigurasi. Source tersedia di repository GitHub publik [rgsunityhub/rgs-unity-hub](https://github.com/rgsunityhub/rgs-unity-hub), yang terhubung ke project Vercel dengan auto-deploy dari branch `main`. Fitur yang belum tersedia dicatat di bagian [Cakupan saat ini](#cakupan-saat-ini), jadi ini bukan klaim bahwa semua fitur permintaan sudah selesai.
 
 ## Struktur project
 
@@ -148,7 +148,18 @@ File di bucket tetap privat kecuali metadata file menyatakan `public`; owner jug
 
 ## Deploy gratis ke Vercel
 
-Deployment production: [https://rgs-unity-hub.vercel.app](https://rgs-unity-hub.vercel.app). Repository GitHub private [rgsunityhub/rgs-unity-hub](https://github.com/rgsunityhub/rgs-unity-hub) sudah terhubung ke project Vercel `rgs-unity-hub`; Vercel GitHub App hanya diberi akses ke repository tersebut. Setiap push ke branch `main` memicu build dan deployment production otomatis. `.env.local` tidak ikut commit (`.gitignore` mengecualikannya).
+Deployment production: [https://rgs-unity-hub.vercel.app](https://rgs-unity-hub.vercel.app). Repository GitHub publik [rgsunityhub/rgs-unity-hub](https://github.com/rgsunityhub/rgs-unity-hub) terhubung ke project Vercel `rgs-unity-hub`; Vercel GitHub App hanya diberi akses ke repository tersebut. Setiap push ke branch `main` memicu build dan deployment production otomatis. `.env.local` tidak ikut commit (`.gitignore` mengecualikannya).
+
+## Deploy ke GitHub Pages
+
+Workflow `.github/workflows/deploy-pages.yml` membangun dan menerbitkan aplikasi ke `https://rgsunityhub.github.io/rgs-unity-hub/` saat perubahan di-push ke branch `main`. Build Pages memakai base path repository, sedangkan build Vercel tetap memakai `/`.
+
+Sebelum workflow dapat berhasil, tambahkan dua **Actions repository secrets** di **Settings → Secrets and variables → Actions**:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY` (publishable/anon key, bukan `service_role`)
+
+Kemudian buka **Settings → Pages**, pilih **GitHub Actions** sebagai build and deployment source, lalu jalankan workflow `Deploy to GitHub Pages`. Kedua deployment berjalan terpisah; konfigurasi Pages tidak mengubah project atau domain Vercel.
 
 Konfigurasi Vercel yang digunakan:
 
