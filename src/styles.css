@@ -788,6 +788,24 @@ a { color: inherit; }
     display: none;
   }
   .mobile-logout-button { display: inline-grid; }
+  .topbar {
+    position: fixed !important;
+    top: 0;
+    right: 0;
+    left: auto;
+    z-index: 9;
+    width: 104px;
+    height: 56px;
+    justify-content: flex-end;
+    border-bottom: 0;
+    background: transparent;
+    backdrop-filter: none;
+    padding: 0 12px 0 0;
+  }
+  .topbar .breadcrumb,
+  .topbar .online-indicator {
+    display: none;
+  }
   .topbar-actions { margin-left: auto; }
   .page-container {
     padding-top: 108px;
