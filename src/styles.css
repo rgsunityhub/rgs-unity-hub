@@ -476,6 +476,7 @@ a { color: inherit; }
 .toast { position: fixed; z-index: 20; right: 20px; top: 75px; max-width: min(470px, calc(100vw - 40px)); display: flex; gap: 9px; align-items: center; padding: 12px; border: 1px solid #743d3d; border-radius: 7px; color: #f1b6b6; background: #241416; font-size: 10px; box-shadow: 0 12px 36px #0008; }
 .toast button { margin-left: auto; border: 0; background: none; color: inherit; display: grid; place-items: center; }
 .mobile-menu, .mobile-close, .mobile-overlay { display: none; }
+.mobile-logout-button { display: none; }
 
 @media (min-width: 1450px) {
   .page-container { padding-top: 44px; }
@@ -719,14 +720,9 @@ a { color: inherit; }
   .community-card {
     display: none;
   }
-  .sidebar-user {
-    padding: 0;
-    border: 0;
-  }
-  .sidebar-user .user-meta,
-  .sidebar-user > .icon-button {
-    display: none;
-  }
+  .sidebar-bottom { display: none; }
+  .mobile-logout-button { display: inline-grid; }
+  .topbar-actions { margin-left: auto; }
   .page-container {
     padding-bottom: 24px;
   }
