@@ -110,12 +110,15 @@ create index chat_messages_room_time on public.chat_messages (room_id, created_a
 create table public.notifications (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles(id) on delete cascade,
+  actor_id uuid references public.profiles(id) on delete set null,
+  source_key text,
   title text not null check (char_length(title) between 1 and 100),
   body text not null default '' check (char_length(body) <= 500),
   created_at timestamptz not null default now(),
   read_at timestamptz
 );
 create index notifications_user_time on public.notifications (user_id, created_at desc);
+create index notifications_source_key on public.notifications (source_key);
 
 create function public.notify_publication_reaction()
 returns trigger language plpgsql security definer set search_path = ''
@@ -125,10 +128,20 @@ declare
 begin
   select owner_id into recipient_id from public.publications where id = new.publication_id;
   if recipient_id is not null and recipient_id <> new.user_id then
-    insert into public.notifications (user_id, title, body)
-    values (recipient_id, 'Publikasi diapresiasi', 'Seseorang memberi apresiasi pada publikasi Anda.');
+    insert into public.notifications (user_id, actor_id, source_key, title, body)
+    values (recipient_id, new.user_id, 'publication_reaction:' || new.publication_id || ':' || new.user_id, 'Publikasi diapresiasi', 'Seseorang memberi apresiasi pada publikasi Anda.');
   end if;
   return new;
+end;
+$$;
+
+create function public.remove_publication_reaction_notification()
+returns trigger language plpgsql security definer set search_path = ''
+as $$
+begin
+  delete from public.notifications
+  where source_key = 'publication_reaction:' || old.publication_id || ':' || old.user_id;
+  return old;
 end;
 $$;
 
@@ -140,10 +153,19 @@ declare
 begin
   select owner_id into recipient_id from public.publications where id = new.publication_id;
   if recipient_id is not null and recipient_id <> new.user_id then
-    insert into public.notifications (user_id, title, body)
-    values (recipient_id, 'Komentar baru', 'Seseorang mengomentari publikasi Anda.');
+    insert into public.notifications (user_id, actor_id, source_key, title, body)
+    values (recipient_id, new.user_id, 'publication_comment:' || new.id, 'Komentar baru', 'Seseorang mengomentari publikasi Anda.');
   end if;
   return new;
+end;
+$$;
+
+create function public.remove_publication_comment_notification()
+returns trigger language plpgsql security definer set search_path = ''
+as $$
+begin
+  delete from public.notifications where source_key = 'publication_comment:' || old.id;
+  return old;
 end;
 $$;
 
@@ -155,10 +177,20 @@ declare
 begin
   select owner_id into recipient_id from public.files where id = new.file_id;
   if recipient_id is not null and recipient_id <> new.user_id then
-    insert into public.notifications (user_id, title, body)
-    values (recipient_id, 'File diapresiasi', 'Seseorang memberi apresiasi pada file Anda.');
+    insert into public.notifications (user_id, actor_id, source_key, title, body)
+    values (recipient_id, new.user_id, 'file_reaction:' || new.file_id || ':' || new.user_id, 'File diapresiasi', 'Seseorang memberi apresiasi pada file Anda.');
   end if;
   return new;
+end;
+$$;
+
+create function public.remove_file_reaction_notification()
+returns trigger language plpgsql security definer set search_path = ''
+as $$
+begin
+  delete from public.notifications
+  where source_key = 'file_reaction:' || old.file_id || ':' || old.user_id;
+  return old;
 end;
 $$;
 
@@ -170,10 +202,19 @@ declare
 begin
   select owner_id into recipient_id from public.files where id = new.file_id;
   if recipient_id is not null and recipient_id <> new.user_id then
-    insert into public.notifications (user_id, title, body)
-    values (recipient_id, 'Komentar file baru', 'Seseorang mengomentari file Anda.');
+    insert into public.notifications (user_id, actor_id, source_key, title, body)
+    values (recipient_id, new.user_id, 'file_comment:' || new.id, 'Komentar file baru', 'Seseorang mengomentari file Anda.');
   end if;
   return new;
+end;
+$$;
+
+create function public.remove_file_comment_notification()
+returns trigger language plpgsql security definer set search_path = ''
+as $$
+begin
+  delete from public.notifications where source_key = 'file_comment:' || old.id;
+  return old;
 end;
 $$;
 
@@ -185,6 +226,14 @@ create trigger file_reaction_notification after insert on public.file_reactions
   for each row execute function public.notify_file_reaction();
 create trigger file_comment_notification after insert on public.file_comments
   for each row execute function public.notify_file_comment();
+create trigger publication_reaction_notification_removed after delete on public.publication_reactions
+  for each row execute function public.remove_publication_reaction_notification();
+create trigger publication_comment_notification_removed after delete on public.publication_comments
+  for each row execute function public.remove_publication_comment_notification();
+create trigger file_reaction_notification_removed after delete on public.file_reactions
+  for each row execute function public.remove_file_reaction_notification();
+create trigger file_comment_notification_removed after delete on public.file_comments
+  for each row execute function public.remove_file_comment_notification();
 
 create table public.password_reset_requests (
   id uuid primary key default gen_random_uuid(),
