@@ -495,12 +495,12 @@ a { color: inherit; }
     display: none;
   }
   .sidebar-user {
-    position: absolute;
+    position: fixed;
     top: 14px;
     left: auto;
     right: 14px;
     z-index: 7;
-    width: auto;
+    width: 174px;
     padding: 0 3px;
     border-top: 0;
   }
