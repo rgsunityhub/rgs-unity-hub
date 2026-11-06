@@ -115,6 +115,7 @@ a { color: inherit; }
 .breadcrumb span { color: #44454c; padding: 0 8px; }
 .breadcrumb strong { color: #dddde1; letter-spacing: .2px; font-size: 11px; }
 .topbar-actions { display: flex; align-items: center; gap: 18px; }
+.topbar-user-meta { display: none; min-width: 0; }
 .online-indicator { color: #9c9da4; font-size: 9px; }
 .online-indicator i, .live-tag i, .chat-header span i { display: inline-block; width: 6px; height: 6px; margin-right: 7px; border-radius: 50%; background: #90e5a0; box-shadow: 0 0 8px rgba(106,226,123,.6); }
 .notification-button { position: relative; }
@@ -708,7 +709,7 @@ a { color: inherit; }
     top: 0;
     right: 46px;
     z-index: 8;
-    width: 122px;
+    width: 260px;
     height: 62px;
     display: flex;
     border-bottom: 0;
@@ -854,10 +855,29 @@ a { color: inherit; }
     display: none;
   }
   .topbar-actions {
-    width: 122px;
+    width: 248px;
     margin-left: auto;
-    gap: 7px;
+    gap: 6px;
     justify-content: flex-end;
+  }
+  .topbar-user-meta {
+    display: block;
+    width: 82px;
+    text-align: left;
+  }
+  .topbar-user-meta strong {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 9px;
+  }
+  .topbar-user-meta span {
+    display: block;
+    margin-top: 4px;
+  }
+  .topbar-user-meta .role-badge {
+    font-size: 7px;
   }
   .page-container {
     padding-top: 108px;
