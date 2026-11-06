@@ -523,6 +523,25 @@ a { color: inherit; }
   .workspace-label {
     padding-top: 18px;
   }
+  .sidebar-bottom {
+    width: clamp(210px, 18vw, 250px);
+  }
+  .community-card {
+    min-height: 68px;
+    gap: 9px;
+    padding: 12px;
+  }
+  .community-notification-button {
+    width: 36px;
+    height: 36px;
+    flex-basis: 36px;
+  }
+  .community-card strong {
+    font-size: 12px;
+  }
+  .community-card span {
+    font-size: 7px;
+  }
 }
 @media (max-width: 760px) {
   .auth-page { padding: 19px 20px 20px; }
@@ -734,6 +753,28 @@ a { color: inherit; }
   .topbar-actions .top-avatar .avatar { width: 34px; height: 34px; }
   .topbar .mobile-logout-button {
     display: inline-grid;
+  }
+}
+
+@media (min-width: 1920px) {
+  .sidebar-bottom {
+    width: 320px;
+  }
+  .community-card {
+    min-height: 100px;
+    gap: 14px;
+    padding: 20px 22px;
+  }
+  .community-notification-button {
+    width: 48px;
+    height: 48px;
+    flex-basis: 48px;
+  }
+  .community-card strong {
+    font-size: 16px;
+  }
+  .community-card span {
+    font-size: 10px;
   }
 }
 
