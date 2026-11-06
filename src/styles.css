@@ -404,6 +404,8 @@ a { color: inherit; }
 .chat-member-name:focus-visible { outline: 2px solid #dfe0e5; outline-offset: 3px; }
 .chat-message.mine .chat-message-content > div { justify-content: flex-end; }
 .chat-message.mine .chat-message-content p { background: #e3e3e7; color: #111216; border-radius: 7px 0 7px 7px; text-align: left; }
+.chat-message-delete { width: 24px; height: 24px; color: #85868e; opacity: 0.75; }
+.chat-message-delete:hover { color: #ff8a8a; opacity: 1; }
 .chat-composer { display: flex; gap: 8px; padding: 11px; border-top: 1px solid #292a30; }
 .chat-composer input { flex: 1; }
 .send-button { width: 38px; border: 1px solid #eeeef0; border-radius: 6px; background: #eeeef0; color: #141519; display: grid; place-items: center; }

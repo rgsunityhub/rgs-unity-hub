@@ -803,7 +803,7 @@ function ChatPage({ profile, onOpenProfile, setError }: { profile: Profile; onOp
   useEffect(() => {
     if (!supabase) return;
     void load();
-    const channel = supabase.channel("rgs-global-chat").on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, () => void load()).subscribe();
+    const channel = supabase.channel("rgs-global-chat").on("postgres_changes", { event: "*", schema: "public", table: "chat_messages" }, () => void load()).subscribe();
     return () => { void supabase?.removeChannel(channel); };
   }, [load]);
   const send = async (event: FormEvent<HTMLFormElement>) => {
@@ -811,6 +811,12 @@ function ChatPage({ profile, onOpenProfile, setError }: { profile: Profile; onOp
     if (!supabase || !text.trim()) return;
     const { error } = await supabase.from("chat_messages").insert({ room_id: "00000000-0000-0000-0000-000000000001", sender_id: profile.id, body: text.trim() });
     if (error) setError(error.message); else { setText(""); await load(); }
+  };
+  const deleteMessage = async (messageId: string) => {
+    if (!supabase) return;
+    const { error } = await supabase.from("chat_messages").delete().eq("id", messageId).eq("sender_id", profile.id);
+    if (error) setError(error.message);
+    else setMessages((current) => current.filter((message) => message.id !== messageId));
   };
   const copyRoomLink = async () => {
     try {
@@ -822,7 +828,7 @@ function ChatPage({ profile, onOpenProfile, setError }: { profile: Profile; onOp
   };
   return <>
     <PageHeading eyebrow="SAY HELLO" title={<>Community chat<span className="title-dot">.</span></>} subtitle="Ruang obrolan umum RGS, live bersama komunitas." />
-    <section className="chat-panel"><div className="chat-header"><div className="chat-room-icon"><MessageCircle size={18} /></div><div><strong># general</strong><span><i /> Ruang publik · {messages.length} pesan dimuat</span></div><div className="chat-menu-wrap"><button className="icon-button" title="Opsi ruang chat" aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}><MoreHorizontal size={19} /></button>{menuOpen && <div className="chat-menu" role="menu"><button role="menuitem" onClick={() => void copyRoomLink()}><Copy size={14} />Salin tautan ruang</button><button role="menuitem" onClick={() => { void load(); setMenuOpen(false); }}><RefreshCw size={14} />Muat ulang pesan</button></div>}</div></div><div className="chat-messages">{messages.map((message) => <article className={`chat-message ${message.profiles?.nickname === profile.nickname ? "mine" : ""}`} key={message.id}><button className="chat-profile-button" type="button" onClick={() => onOpenProfile(message.sender_id)} aria-label={`Lihat profil ${message.profiles?.nickname ?? "Member"}`}><Avatar profile={{ nickname: message.profiles?.nickname ?? "Member", avatar_url: message.profiles?.avatar_url ?? null }} /></button><div className="chat-message-content"><div><button className="chat-member-name" type="button" onClick={() => onOpenProfile(message.sender_id)}>{message.profiles?.nickname ?? "Member"}</button>{message.profiles?.role && <RoleBadge role={message.profiles.role} />}<time>{new Date(message.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</time></div><p>{message.body}</p></div></article>)}</div><form className="chat-composer" onSubmit={send}><input value={text} onChange={(event) => setText(event.target.value)} placeholder="Kirim pesan ke #general..." maxLength={2000} /><button className="send-button" disabled={!text.trim()} aria-label="Kirim pesan"><Send size={17} /></button></form></section>
+    <section className="chat-panel"><div className="chat-header"><div className="chat-room-icon"><MessageCircle size={18} /></div><div><strong># general</strong><span><i /> Ruang publik · {messages.length} pesan dimuat</span></div><div className="chat-menu-wrap"><button className="icon-button" title="Opsi ruang chat" aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}><MoreHorizontal size={19} /></button>{menuOpen && <div className="chat-menu" role="menu"><button role="menuitem" onClick={() => void copyRoomLink()}><Copy size={14} />Salin tautan ruang</button><button role="menuitem" onClick={() => { void load(); setMenuOpen(false); }}><RefreshCw size={14} />Muat ulang pesan</button></div>}</div></div><div className="chat-messages">{messages.map((message) => <article className={`chat-message ${message.sender_id === profile.id ? "mine" : ""}`} key={message.id}><button className="chat-profile-button" type="button" onClick={() => onOpenProfile(message.sender_id)} aria-label={`Lihat profil ${message.profiles?.nickname ?? "Member"}`}><Avatar profile={{ nickname: message.profiles?.nickname ?? "Member", avatar_url: message.profiles?.avatar_url ?? null }} /></button><div className="chat-message-content"><div><button className="chat-member-name" type="button" onClick={() => onOpenProfile(message.sender_id)}>{message.profiles?.nickname ?? "Member"}</button>{message.profiles?.role && <RoleBadge role={message.profiles.role} />}<time>{new Date(message.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</time>{message.sender_id === profile.id && <button className="icon-button chat-message-delete" type="button" onClick={() => void deleteMessage(message.id)} aria-label="Hapus pesan" title="Hapus pesan"><Trash2 size={14} /></button>}</div><p>{message.body}</p></div></article>)}</div><form className="chat-composer" onSubmit={send}><input value={text} onChange={(event) => setText(event.target.value)} placeholder="Kirim pesan ke #general..." maxLength={2000} /><button className="send-button" disabled={!text.trim()} aria-label="Kirim pesan"><Send size={17} /></button></form></section>
     <p className="chat-notice"><Shield size={14} /> Jaga ruang tetap nyaman. Jangan kirim password, data pribadi, atau informasi sensitif.</p>
   </>;
 }
