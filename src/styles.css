@@ -400,11 +400,10 @@ a { color: inherit; }
 
 .profile-card { border: 1px solid #2a2b31; border-radius: 9px; overflow: hidden; background: #111216; }
 .profile-cover { height: 143px; position: relative; overflow: hidden; background: linear-gradient(110deg, #23242a, #111216 75%); }
-.profile-cover::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at 84% 38%, rgba(223,223,230,.12), transparent 43%); }
+.profile-cover::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at 84% 38%, rgba(223,223,230,.12), transparent 43%); pointer-events: none; }
 .profile-cover.has-cover { background-size: cover; background-position: center; }
 .cover-upload-button { position: absolute; right: 14px; bottom: 12px; z-index: 2; min-height: 30px; display: flex; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid rgba(255,255,255,.18); border-radius: 5px; background: rgba(13,14,17,.82); color: #ededf0; font-size: 9px; cursor: pointer; }
 .cover-upload-button input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
-.cover-mark { position: absolute; right: 40px; top: -58px; width: 230px; height: 230px; background: url("/rgs-logo.png") center/contain no-repeat; opacity: .09; filter: grayscale(1); }
 .profile-main { display: flex; align-items: flex-end; gap: 16px; padding: 0 21px 19px; margin-top: -35px; position: relative; z-index: 1; }
 .profile-avatar-upload { position: relative; cursor: pointer; }
 .profile-avatar-upload > .avatar { width: 71px; height: 71px; border: 3px solid #111216; }
