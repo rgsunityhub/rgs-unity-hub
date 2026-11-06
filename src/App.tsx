@@ -639,7 +639,7 @@ function StorageFilePreview({ file, onOpen }: { file: { name: string; mime_type:
         : file.mime_type === "application/zip" || ["zip", "rar", "7z"].includes(extension) ? "archive"
           : file.mime_type.startsWith("text/") || ["txt", "md", "log"].includes(extension) ? "text" : "file";
   const TypeIcon = kind === "image" ? FileImage : kind === "video" ? Film : kind === "audio" ? Music : kind === "pdf" || kind === "text" ? FileText : kind === "archive" ? FileArchive : File;
-  const typeLabel = kind === "pdf" ? "PDF" : kind === "archive" ? extension.toUpperCase() : kind === "text" ? extension.toUpperCase() || "TXT" : kind === "image" || kind === "video" ? extension.toUpperCase() : "FILE";
+  const typeLabel = kind === "pdf" ? "PDF" : kind === "archive" || kind === "audio" || kind === "text" ? extension.toUpperCase() || (kind === "text" ? "TXT" : kind === "audio" ? "AUDIO" : "FILE") : kind === "image" || kind === "video" ? extension.toUpperCase() : "FILE";
 
   useEffect(() => {
     setPreviewUrl("");
