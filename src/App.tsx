@@ -481,8 +481,8 @@ function PublicFileCard({ file, profileId, ownerId, ownerName, onOpenProfile, on
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [previewOpen]);
-  const TypeIcon = kind === "image" ? FileImage : kind === "video" ? Film : kind === "pdf" || kind === "text" ? FileText : kind === "archive" ? FileArchive : File;
-  const typeLabel = kind === "pdf" ? "PDF" : kind === "archive" ? extension.toUpperCase() : kind === "text" ? extension.toUpperCase() || "TEXT" : kind === "video" ? "VIDEO" : kind === "image" ? extension.toUpperCase() : "FILE";
+  const TypeIcon = kind === "image" ? FileImage : kind === "video" ? Film : kind === "audio" ? Music : kind === "pdf" || kind === "text" ? FileText : kind === "archive" ? FileArchive : File;
+  const typeLabel = kind === "pdf" ? "PDF" : kind === "archive" ? extension.toUpperCase() : kind === "text" ? extension.toUpperCase() || "TEXT" : kind === "audio" || kind === "video" ? extension.toUpperCase() : kind === "image" ? extension.toUpperCase() : "FILE";
   const missingObject = fileError.toLowerCase().includes("object not found");
   const handleDownload = async () => {
     const error = await onDownload();
@@ -634,10 +634,11 @@ function StorageFilePreview({ file, onOpen }: { file: { name: string; mime_type:
   const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
   const kind = file.mime_type.startsWith("image/") ? "image"
     : file.mime_type.startsWith("video/") ? "video"
+      : file.mime_type.startsWith("audio/") || ["mp3", "wav", "ogg", "m4a", "aac", "flac"].includes(extension) ? "audio"
       : file.mime_type === "application/pdf" || extension === "pdf" ? "pdf"
         : file.mime_type === "application/zip" || ["zip", "rar", "7z"].includes(extension) ? "archive"
           : file.mime_type.startsWith("text/") || ["txt", "md", "log"].includes(extension) ? "text" : "file";
-  const TypeIcon = kind === "image" ? FileImage : kind === "video" ? Film : kind === "pdf" || kind === "text" ? FileText : kind === "archive" ? FileArchive : File;
+  const TypeIcon = kind === "image" ? FileImage : kind === "video" ? Film : kind === "audio" ? Music : kind === "pdf" || kind === "text" ? FileText : kind === "archive" ? FileArchive : File;
   const typeLabel = kind === "pdf" ? "PDF" : kind === "archive" ? extension.toUpperCase() : kind === "text" ? extension.toUpperCase() || "TXT" : kind === "image" || kind === "video" ? extension.toUpperCase() : "FILE";
 
   useEffect(() => {

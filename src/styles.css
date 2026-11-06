@@ -162,6 +162,8 @@ a { color: inherit; }
 .public-file-type-preview:hover { color: #ececef; }
 .public-file-preview .file-type-icon { width: auto; height: auto; border: 0; background: transparent; }
 .public-file-preview .file-type-icon.pdf { color: #e6a1a1; }
+.public-file-preview .file-type-icon.audio,
+.storage-file-preview .file-type-icon.audio { color: #d9d9e0; }
 .public-file-preview .file-type-icon.archive { color: #e4d59e; }
 .public-file-preview .file-type-icon.text { color: #a9bded; }
 .public-feed-file.image .public-file-preview, .public-feed-file.video .public-file-preview { width: fit-content; height: fit-content; max-width: 108px; max-height: 104px; flex: 0 0 auto; padding: 2px; }
