@@ -617,13 +617,13 @@ a { color: inherit; }
   .file-row-name { min-width: 0; overflow: hidden; }
   .file-row-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .storage-file-preview { width: clamp(42px, 12vw, 48px); height: clamp(42px, 12vw, 48px); flex-basis: clamp(42px, 12vw, 48px); }
-  .public-feed-file { display: grid; grid-template-columns: clamp(78px, 21vw, 112px) minmax(0, 1fr) auto; grid-template-areas: "preview details details" "preview visibility download"; column-gap: 10px; row-gap: 8px; align-items: center; }
+  .public-feed-file { display: grid; grid-template-columns: clamp(78px, 21vw, 112px) minmax(0, 1fr); grid-template-areas: "preview details" "preview actions"; column-gap: 10px; row-gap: 7px; align-items: center; }
   .public-feed-file .public-file-preview { grid-area: preview; }
   .public-feed-file.image .public-file-preview, .public-feed-file.video .public-file-preview { width: clamp(78px, 21vw, 112px); height: clamp(58px, 16vw, 84px); max-width: none; max-height: none; flex-basis: clamp(78px, 21vw, 112px); }
   .public-feed-file.image .public-file-preview img, .public-feed-file.video .public-file-preview video { max-width: none; max-height: none; }
   .public-feed-file .file-row-name { grid-area: details; width: 100%; }
-  .public-feed-file > .visibility-chip { grid-area: visibility; display: inline-flex; justify-self: start; }
-  .public-feed-file > .icon-button { grid-area: download; justify-self: end; }
+  .public-feed-file > .visibility-chip { grid-area: actions; justify-self: start; align-self: center; }
+  .public-feed-file > .icon-button { grid-area: actions; justify-self: end; align-self: center; }
   .public-feed-file .file-row-name { min-width: 0; overflow: hidden; }
   .file-preview-name { width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .public-feed-file .file-row-name > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
