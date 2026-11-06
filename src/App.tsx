@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import {
   ArrowDownToLine, ArrowUpRight, Bell, Check, CircleHelp, Copy, Expand, File, FileArchive, FileImage,
   FileText, Film, Folder, Globe2, Home, KeyRound, LayoutDashboard, Link2, LockKeyhole, LogOut,
-  Menu, MessageCircle, MoreHorizontal, Music, Plus, RefreshCw, Search, Send, Settings, Shield, Sparkles, Image as ImageIcon, Upload,
+  Menu, MessageCircle, Minus, MoreHorizontal, Music, Plus, RefreshCw, Search, Send, Settings, Shield, Sparkles, Image as ImageIcon, Upload,
   Trash2, Users, Volume2, VolumeX, X, Youtube, type LucideIcon,
 } from "lucide-react";
 import { isSupabaseConfigured, supabase } from "./lib/supabase";
@@ -508,6 +508,7 @@ function FilePreviewModal({ file, ownerName, onClose }: { file: { name: string; 
   const [error, setError] = useState("");
   const [volume, setVolume] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [imageZoom, setImageZoom] = useState(1);
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const playerRef = useRef<HTMLDivElement>(null);
@@ -545,6 +546,10 @@ function FilePreviewModal({ file, ownerName, onClose }: { file: { name: string; 
     document.addEventListener("fullscreenchange", syncFullscreen);
     return () => document.removeEventListener("fullscreenchange", syncFullscreen);
   }, []);
+
+  const setImageZoomSafe = (nextZoom: number) => {
+    setImageZoom(Math.min(4, Math.max(0.5, nextZoom)));
+  };
 
   const download = async () => {
     if (!supabase) return;
@@ -584,7 +589,7 @@ function FilePreviewModal({ file, ownerName, onClose }: { file: { name: string; 
       <div className="file-preview-content">
         {!url && !error && <LoadingLine />}
         {error && <div className="file-preview-message"><TypeIcon size={30} /><strong>File tidak dapat dibuka</strong><span>{error.toLowerCase().includes("object not found") ? "Objek file tidak ditemukan di Storage." : error}</span></div>}
-        {url && isImage && <img className="image-lightbox-image" src={url} alt={file.name} />}
+        {url && isImage && <div className="file-image-player"><div className="file-image-stage"><img className="image-lightbox-image" src={url} alt={file.name} style={{ transform: `scale(${imageZoom})` }} /></div><div className="file-image-controls"><button className="icon-button" type="button" aria-label="Perkecil gambar" title="Perkecil" disabled={imageZoom <= 0.5} onClick={() => setImageZoomSafe(imageZoom - 0.25)}><Minus size={17} /></button><input type="range" min="0.5" max="4" step="0.25" value={imageZoom} aria-label="Zoom gambar" onChange={(event) => setImageZoomSafe(Number(event.target.value))} /><span>{Math.round(imageZoom * 100)}%</span><button className="icon-button" type="button" aria-label="Perbesar gambar" title="Perbesar" disabled={imageZoom >= 4} onClick={() => setImageZoomSafe(imageZoom + 0.25)}><Plus size={17} /></button><button className="icon-button" type="button" aria-label="Atur ulang zoom gambar" title="Zoom asli" onClick={() => setImageZoomSafe(1)}>1:1</button></div></div>}
         {url && isVideo && <div ref={playerRef} className={`file-video-player ${isFullscreen ? "fullscreen" : ""}`}><video ref={videoRef} className="file-preview-video" src={url} controls controlsList="nodownload noplaybackrate noremoteplayback nofullscreen" disablePictureInPicture disableRemotePlayback playsInline onVolumeChange={(event) => setVolume(event.currentTarget.muted ? 0 : event.currentTarget.volume)} /><div className="file-video-volume"><button className="icon-button" type="button" aria-label={volume === 0 ? "Nyalakan suara video" : "Matikan suara video"} title={volume === 0 ? "Nyalakan suara" : "Matikan suara"} onClick={() => setVideoVolume(volume === 0 ? 1 : 0)}>{volume === 0 ? <VolumeX size={17} /> : <Volume2 size={17} />}</button><input type="range" min="0" max="1" step="0.05" value={volume} aria-label="Volume video" onChange={(event) => setVideoVolume(Number(event.target.value))} /><span>{Math.round(volume * 100)}%</span><button className="icon-button" type="button" aria-label={isFullscreen ? "Keluar dari layar penuh" : "Layar penuh"} title={isFullscreen ? "Keluar layar penuh" : "Layar penuh"} onClick={() => void toggleFullscreen()}><Expand size={17} /></button></div></div>}
         {url && isAudio && <div ref={playerRef} className={`file-video-player file-audio-player ${isFullscreen ? "fullscreen" : ""}`}><div className="file-audio-cover"><Music size={54} strokeWidth={1.35} /><strong>{extension.toUpperCase()}</strong></div><audio ref={audioRef} className="file-preview-audio" src={url} controls controlsList="nodownload noplaybackrate noremoteplayback" preload="metadata" onVolumeChange={(event) => setVolume(event.currentTarget.muted ? 0 : event.currentTarget.volume)} /><div className="file-video-volume"><button className="icon-button" type="button" aria-label={volume === 0 ? "Nyalakan suara audio" : "Matikan suara audio"} title={volume === 0 ? "Nyalakan suara" : "Matikan suara"} onClick={() => setAudioVolume(volume === 0 ? 1 : 0)}>{volume === 0 ? <VolumeX size={17} /> : <Volume2 size={17} />}</button><input type="range" min="0" max="1" step="0.05" value={volume} aria-label="Volume audio" onChange={(event) => setAudioVolume(Number(event.target.value))} /><span>{Math.round(volume * 100)}%</span><button className="icon-button" type="button" aria-label={isFullscreen ? "Keluar dari layar penuh" : "Layar penuh"} title={isFullscreen ? "Keluar layar penuh" : "Layar penuh"} onClick={() => void toggleFullscreen()}><Expand size={17} /></button></div></div>}
         {url && isPdf && <iframe className="file-preview-iframe" src={url} title={`Pratinjau ${file.name}`} />}
