@@ -526,7 +526,7 @@ insert into storage.buckets (id, name, public, file_size_limit)
 values ('member-files', 'member-files', false, 26214400), ('avatars', 'avatars', true, 3145728)
 on conflict (id) do update set public = excluded.public, file_size_limit = excluded.file_size_limit;
 update storage.buckets
-set allowed_mime_types = array['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'video/mp4', 'video/webm', 'application/pdf', 'text/plain', 'application/zip']
+set allowed_mime_types = null
 where id = 'member-files';
 update storage.buckets
 set allowed_mime_types = array['image/png', 'image/jpeg', 'image/gif', 'image/webp']
