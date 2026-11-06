@@ -725,7 +725,7 @@ a { color: inherit; }
     display: none;
   }
   .topbar-actions {
-    width: 122px;
+    width: 260px;
     justify-content: flex-end;
     gap: 7px;
   }
