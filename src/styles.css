@@ -119,6 +119,8 @@ a { color: inherit; }
 .online-indicator i, .live-tag i, .chat-header span i { display: inline-block; width: 6px; height: 6px; margin-right: 7px; border-radius: 50%; background: #90e5a0; box-shadow: 0 0 8px rgba(106,226,123,.6); }
 .notification-button { position: relative; }
 .notification-button > i { position: absolute; width: 5px; height: 5px; border-radius: 50%; right: 5px; top: 5px; background: #d7d8df; }
+.sidebar-notification-button { position: relative; flex: 0 0 32px; }
+.sidebar-notification-button > i { position: absolute; width: 5px; height: 5px; border-radius: 50%; right: 4px; top: 4px; background: #f1f1f3; }
 .top-avatar { border: 0; background: transparent; padding: 0; }
 .top-avatar .avatar { width: 30px; height: 30px; }
 .page-container { max-width: 1180px; margin: 0 auto; padding: 35px clamp(20px, 4vw, 56px) 70px; }
@@ -508,7 +510,8 @@ a { color: inherit; }
     right: 14px;
     z-index: 7;
     width: 174px;
-    padding: 0 3px;
+    gap: 6px;
+    padding: 0 2px;
     border-top: 0;
   }
   .workspace-label {
@@ -801,7 +804,7 @@ a { color: inherit; }
     right: 0;
     left: auto;
     z-index: 9;
-    width: 104px;
+    width: 150px;
     height: 56px;
     justify-content: flex-end;
     border-bottom: 0;
