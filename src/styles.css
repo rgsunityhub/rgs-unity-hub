@@ -579,3 +579,124 @@ a { color: inherit; }
   .image-lightbox-close { top: 12px; right: 12px; }
   .image-lightbox-caption { align-items: flex-start; flex-direction: column; gap: 4px; }
 }
+
+@media (min-width: 1450px) {
+  .sidebar {
+    inset: 0 0 auto 0;
+    width: 100%;
+    height: 62px;
+    flex-direction: row;
+    align-items: center;
+    border-right: 0;
+    border-bottom: 1px solid #24252a;
+    padding: 0 clamp(20px, 3vw, 46px);
+    overflow: hidden;
+  }
+  .sidebar-brand {
+    width: 246px;
+    flex: 0 0 246px;
+    padding: 0 20px 0 0;
+    border-bottom: 0;
+  }
+  .workspace-label,
+  .sidebar-bottom,
+  .mobile-close {
+    display: none;
+  }
+  .side-nav {
+    min-width: 0;
+    flex: 1;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 3px;
+  }
+  .nav-link {
+    width: auto;
+    padding: 9px 10px;
+    font-size: 10px;
+  }
+  .nav-link.selected::before {
+    inset: auto 10px -20px;
+    width: auto;
+    height: 2px;
+  }
+  .nav-indicator {
+    margin-left: 2px;
+  }
+  .main-column {
+    width: 100%;
+    margin-left: 0;
+    padding-top: 62px;
+  }
+  .topbar {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .mobile-menu,
+  .sidebar-brand,
+  .workspace-label,
+  .sidebar-bottom,
+  .mobile-overlay {
+    display: none;
+  }
+  .sidebar,
+  .sidebar.sidebar-open {
+    inset: auto 0 0 0;
+    width: 100%;
+    height: 68px;
+    transform: none;
+    display: block;
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    border-top: 1px solid #2b2c32;
+    border-right: 0;
+    background: rgba(13, 14, 17, .97);
+    backdrop-filter: blur(18px);
+  }
+  .side-nav {
+    height: 100%;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 2px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .side-nav::-webkit-scrollbar {
+    display: none;
+  }
+  .nav-link {
+    min-width: 58px;
+    height: 56px;
+    flex: 1 0 58px;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    padding: 5px 4px;
+    text-align: center;
+    border-radius: 7px;
+    font-size: 8px;
+  }
+  .nav-link svg {
+    width: 17px;
+    height: 17px;
+  }
+  .nav-link.selected::before {
+    inset: 0 14px auto;
+    width: auto;
+    height: 2px;
+  }
+  .nav-indicator {
+    position: absolute;
+    top: 4px;
+    left: calc(50% + 8px);
+    margin: 0;
+  }
+  .main-column {
+    padding-bottom: 68px;
+  }
+  .page-container {
+    padding-bottom: 24px;
+  }
+}
