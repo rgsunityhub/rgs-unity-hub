@@ -225,7 +225,9 @@ a { color: inherit; }
 .public-label { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; color: #8f9098; font-size: 7px; letter-spacing: .8px; }
 .comments-panel { border-top: 1px solid #25262b; padding: 10px 0 11px; }
 .comments-list { display: flex; flex-direction: column; gap: 8px; max-height: 230px; overflow: auto; }
-.comment-row { display: grid; grid-template-columns: max-content 1fr max-content; align-items: baseline; gap: 8px; color: #bfc0c6; font-size: 9px; }
+.comment-row { display: grid; grid-template-columns: max-content 1fr max-content max-content; align-items: baseline; gap: 8px; color: #bfc0c6; font-size: 9px; }
+.comment-delete { width: 24px; height: 24px; color: #777984; }
+.comment-delete:hover { color: #ef6b75; border-color: #ef6b75; }
 .comment-row strong { color: #e1e1e5; }
 .comment-row span { overflow-wrap: anywhere; line-height: 1.5; }
 .comment-row time, .comments-empty { color: #777881; font-size: 8px; }

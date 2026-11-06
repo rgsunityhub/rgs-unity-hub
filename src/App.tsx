@@ -1043,7 +1043,7 @@ function Engagement({ targetType, targetId, profileId, setError }: { targetType:
   const [likes, setLikes] = useState(0);
   const [commentCount, setCommentCount] = useState(0);
   const [commentsOpen, setCommentsOpen] = useState(false);
-  const [comments, setComments] = useState<Array<{ id: string; body: string; created_at: string; nickname: string }>>([]);
+  const [comments, setComments] = useState<Array<{ id: string; user_id: string; body: string; created_at: string; nickname: string }>>([]);
   const [commentText, setCommentText] = useState("");
   const targetColumn = targetType === "publication" ? "publication_id" : "file_id";
   const reactionTable = targetType === "publication" ? "publication_reactions" : "file_reactions";
@@ -1068,14 +1068,14 @@ function Engagement({ targetType, targetId, profileId, setError }: { targetType:
 
   const loadComments = useCallback(async () => {
     if (!supabase) return;
-    const { data, error } = await supabase.from(commentTable).select("id, body, created_at, profiles(nickname)").eq(targetColumn, targetId).order("created_at", { ascending: true }).limit(50);
+    const { data, error } = await supabase.from(commentTable).select("id, user_id, body, created_at, profiles(nickname)").eq(targetColumn, targetId).order("created_at", { ascending: true }).limit(50);
     if (error) { setError(error.message); return; }
     const normalized = (data ?? []).flatMap((value) => {
       const row = value as unknown as Record<string, unknown>;
       const joined = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
       const author = joined && typeof joined === "object" ? joined as Record<string, unknown> : null;
-      if (typeof row.id !== "string" || typeof row.body !== "string" || typeof row.created_at !== "string") return [];
-      return [{ id: row.id, body: row.body, created_at: row.created_at, nickname: author && typeof author.nickname === "string" ? author.nickname : "Member" }];
+      if (typeof row.id !== "string" || typeof row.user_id !== "string" || typeof row.body !== "string" || typeof row.created_at !== "string") return [];
+      return [{ id: row.id, user_id: row.user_id, body: row.body, created_at: row.created_at, nickname: author && typeof author.nickname === "string" ? author.nickname : "Member" }];
     });
     setComments(normalized);
     setCommentCount(normalized.length);
@@ -1103,8 +1103,14 @@ function Engagement({ targetType, targetId, profileId, setError }: { targetType:
     if (error) setError(error.message);
     else { setCommentText(""); await loadComments(); }
   };
+  const deleteComment = async (id: string) => {
+    if (!supabase) return;
+    const { error } = await supabase.from(commentTable).delete().eq("id", id).eq("user_id", profileId);
+    if (error) setError(error.message);
+    else await loadComments();
+  };
 
-  return <><footer className="post-actions"><button className={`post-action ${liked ? "reacted" : ""}`} aria-label={liked ? "Batalkan apresiasi" : "Beri apresiasi"} onClick={() => void toggleLike()}><Sparkles size={16} /><span>Apresiasi {likes ? likes : ""}</span></button><button className="post-action" aria-expanded={commentsOpen} onClick={() => { const next = !commentsOpen; setCommentsOpen(next); if (next) void loadComments(); }}><MessageCircle size={16} /><span>Diskusi {commentCount ? commentCount : ""}</span></button></footer>{commentsOpen && <section className="comments-panel"><div className="comments-list">{comments.map((comment) => <div className="comment-row" key={comment.id}><strong>{comment.nickname}</strong><span>{comment.body}</span><time>{new Date(comment.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</time></div>)}{!comments.length && <span className="comments-empty">Belum ada diskusi. Mulai percakapan yang baik.</span>}</div><form className="comment-form" onSubmit={addComment}><input value={commentText} onChange={(event) => setCommentText(event.target.value)} placeholder="Tulis komentar..." maxLength={1000} /><button className="icon-button" disabled={!commentText.trim()} aria-label="Kirim komentar"><Send size={15} /></button></form></section>}</>;
+  return <><footer className="post-actions"><button className={`post-action ${liked ? "reacted" : ""}`} aria-label={liked ? "Batalkan apresiasi" : "Beri apresiasi"} onClick={() => void toggleLike()}><Sparkles size={16} /><span>Apresiasi {likes ? likes : ""}</span></button><button className="post-action" aria-expanded={commentsOpen} onClick={() => { const next = !commentsOpen; setCommentsOpen(next); if (next) void loadComments(); }}><MessageCircle size={16} /><span>Diskusi {commentCount ? commentCount : ""}</span></button></footer>{commentsOpen && <section className="comments-panel"><div className="comments-list">{comments.map((comment) => <div className="comment-row" key={comment.id}><strong>{comment.nickname}</strong><span>{comment.body}</span><time>{new Date(comment.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</time>{comment.user_id === profileId && <button className="icon-button comment-delete" type="button" onClick={() => void deleteComment(comment.id)} aria-label={`Hapus komentar ${comment.nickname}`} title="Hapus komentar"><Trash2 size={13} /></button>}</div>)}{!comments.length && <span className="comments-empty">Belum ada diskusi. Mulai percakapan yang baik.</span>}</div><form className="comment-form" onSubmit={addComment}><input value={commentText} onChange={(event) => setCommentText(event.target.value)} placeholder="Tulis komentar..." maxLength={1000} /><button className="icon-button" disabled={!commentText.trim()} aria-label="Kirim komentar"><Send size={15} /></button></form></section>}</>;
 }
 
 function YouTubePlayer({ videoId, title }: { videoId: string; title: string }) {
