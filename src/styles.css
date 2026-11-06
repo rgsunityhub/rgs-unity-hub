@@ -184,6 +184,10 @@ a { color: inherit; }
 .file-video-player:fullscreen .file-video-volume { flex: 0 0 42px; }
 .file-preview-video, .file-preview-iframe { display: block; width: 100%; height: 100%; min-height: 0; border: 0; background: #08090c; }
 .file-preview-video { flex: 1; }
+.file-audio-player { align-items: stretch; justify-content: center; }
+.file-audio-cover { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 0; color: #d8d9df; background: radial-gradient(circle at center, rgba(255,255,255,.08), transparent 36%), #0b0c10; }
+.file-audio-cover strong { color: #9b9ca5; font-size: 12px; letter-spacing: 2px; }
+.file-preview-audio { flex: 0 0 54px; width: 100%; height: 54px; background: #111216; }
 .file-preview-video::-webkit-media-controls-fullscreen-button { display: none !important; }
 .file-preview-video::-webkit-media-controls-mute-button,
 .file-preview-video::-webkit-media-controls-volume-slider { display: none !important; }
