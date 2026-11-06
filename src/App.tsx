@@ -51,7 +51,12 @@ function normalizePublications(rows: unknown): Publication[] {
     if (joined && typeof joined === "object") {
       const candidate = joined as Record<string, unknown>;
       if (typeof candidate.nickname === "string" && isRole(candidate.role)) {
-        author = { id: typeof candidate.id === "string" ? candidate.id : row.owner_id, nickname: candidate.nickname, avatar_url: typeof candidate.avatar_url === "string" ? candidate.avatar_url : null, role: candidate.role };
+        author = {
+          id: typeof candidate.id === "string" ? candidate.id : row.owner_id,
+          nickname: candidate.nickname,
+          avatar_url: typeof candidate.avatar_url === "string" ? candidate.avatar_url : null,
+          role: candidate.role,
+        };
       }
     }
     return [{ id: row.id, owner_id: row.owner_id, title: row.title, body: row.body, kind: row.kind, visibility: row.visibility, created_at: row.created_at, profiles: author }];
@@ -85,13 +90,12 @@ const PUBLICATION_TABLE = ["publications", "profiles"] as const;
 const NOTIFICATION_TABLE = ["notifications"] as const;
 const ENGAGEMENT_TABLES = ["publication_reactions", "publication_comments"] as const;
 const FILE_ENGAGEMENT_TABLES = ["file_reactions", "file_comments"] as const;
-const PROFILE_PUBLICATION_TABLES = ["profiles", "publications"] as const;
 
 function App() {
   const [session, setSession] = useState<Awaited<ReturnType<NonNullable<typeof supabase>["auth"]["getSession"]>>["data"]["session"]>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [viewedProfileId, setViewedProfileId] = useState<string | null>(null);
   const [page, setPage] = useState<Page>("home");
+  const [viewedProfileId, setViewedProfileId] = useState<string | null>(null);
   const [loading, setLoading] = useState(isSupabaseConfigured);
   const [error, setError] = useState("");
   const [recoveryPending, setRecoveryPending] = useState(window.location.hash.includes("type=recovery"));
@@ -135,12 +139,19 @@ function App() {
   if (!session || !profile) return <AuthPage configured onAuthenticated={setSession} />;
   const visibleNav = navItems.filter((item) => !item.roles || item.roles.includes(profile.role));
   const selectedPage = visibleNav.some((item) => item.id === page) ? page : "home";
+  const navigate = (nextPage: Page) => {
+    if (nextPage !== "profile") setViewedProfileId(null);
+    setPage(nextPage);
+  };
+  const openMemberProfile = (memberId: string) => {
+    setViewedProfileId(memberId);
+    setPage("profile");
+  };
 
   return (
-    <HubLayout profile={profile} selectedPage={selectedPage} navItems={visibleNav} onNavigate={setPage} onSignOut={signOut} setError={setError}>
+    <HubLayout profile={profile} selectedPage={selectedPage} navItems={visibleNav} onNavigate={navigate} onSignOut={signOut} setError={setError}>
       {error && <div className="toast error-toast"><CircleHelp size={17} />{error}<button onClick={() => setError("")} aria-label="Tutup"><X size={15} /></button></div>}
-      <PageContent page={selectedPage} profile={profile} setProfile={setProfile} setError={setError} onOpenProfile={setViewedProfileId} />
-      {viewedProfileId && <MemberProfileDialog key={viewedProfileId} profileId={viewedProfileId} onClose={() => setViewedProfileId(null)} setError={setError} />}
+      <PageContent page={selectedPage} profile={profile} viewedProfileId={viewedProfileId} onOpenProfile={openMemberProfile} setProfile={setProfile} setError={setError} />
     </HubLayout>
   );
 }
@@ -280,7 +291,7 @@ function HubLayout({ profile, selectedPage, navItems: items, onNavigate, onSignO
         <nav className="side-nav">{items.map(({ id, label, icon: Icon }) => <button key={id} className={selectedPage === id ? "nav-link selected" : "nav-link"} onClick={() => { onNavigate(id); setMenuOpen(false); }}><Icon size={18} /><span>{label}</span>{id === "notifications" && unreadCount > 0 && <span className="nav-indicator">{unreadCount > 99 ? "99+" : unreadCount}</span>}</button>)}</nav>
         <div className="sidebar-bottom">
           <div className="community-card"><div className="community-mark"><Sparkles size={16} /></div><strong>RGS Community</strong><span>UNITY • GAMING • COMMUNITY</span></div>
-          <div className="sidebar-user"><ProfileAvatarButton profile={profile} onOpen={() => onNavigate("profile")} /><div className="user-meta"><strong><ProfileNameButton nickname={profile.nickname} onClick={() => onNavigate("profile")} /></strong><span><RoleBadge role={profile.role} /></span></div><button className="icon-button" onClick={onSignOut} title="Keluar"><LogOut size={17} /></button></div>
+          <div className="sidebar-user"><Avatar profile={profile} /><div className="user-meta"><strong>{profile.nickname}</strong><span><RoleBadge role={profile.role} /></span></div><button className="icon-button" onClick={onSignOut} title="Keluar"><LogOut size={17} /></button></div>
         </div>
       </aside>
       <div className="main-column">
@@ -292,23 +303,23 @@ function HubLayout({ profile, selectedPage, navItems: items, onNavigate, onSignO
   );
 }
 
-function PageContent({ page, profile, setProfile, setError, onOpenProfile }: { page: Page; profile: Profile; setProfile: (profile: Profile) => void; setError: (message: string) => void; onOpenProfile: (profileId: string) => void }) {
+function PageContent({ page, profile, viewedProfileId, onOpenProfile, setProfile, setError }: { page: Page; profile: Profile; viewedProfileId: string | null; onOpenProfile: (memberId: string) => void; setProfile: (profile: Profile) => void; setError: (message: string) => void }) {
   switch (page) {
-    case "home": return <HomePage profile={profile} setError={setError} onOpenProfile={onOpenProfile} />;
-    case "dashboard": return <DashboardPage profile={profile} setError={setError} onOpenProfile={onOpenProfile} />;
-    case "members": return <MembersPage profile={profile} setError={setError} onOpenProfile={onOpenProfile} />;
-    case "storage": return <StoragePage profile={profile} setError={setError} onOpenProfile={onOpenProfile} />;
-    case "youtube": return <YouTubePage profile={profile} setError={setError} onOpenProfile={onOpenProfile} />;
-    case "chat": return <ChatPage profile={profile} setError={setError} onOpenProfile={onOpenProfile} />;
-    case "profile": return <ProfilePage profile={profile} setProfile={setProfile} setError={setError} />;
+    case "home": return <HomePage profile={profile} onOpenProfile={onOpenProfile} setError={setError} />;
+    case "dashboard": return <DashboardPage profile={profile} onOpenProfile={onOpenProfile} setError={setError} />;
+    case "members": return <MembersPage profile={profile} setError={setError} />;
+    case "storage": return <StoragePage profile={profile} onOpenProfile={onOpenProfile} setError={setError} />;
+    case "youtube": return <YouTubePage profile={profile} onOpenProfile={onOpenProfile} setError={setError} />;
+    case "chat": return <ChatPage profile={profile} setError={setError} />;
+    case "profile": return <ProfilePage profile={profile} viewedProfileId={viewedProfileId} setProfile={setProfile} setError={setError} />;
     case "invites": return <InvitesPage profile={profile} setError={setError} />;
     case "notifications": return <NotificationsPage setError={setError} />;
     case "settings": return <SettingsPage />;
-    default: return <HomePage profile={profile} setError={setError} onOpenProfile={onOpenProfile} />;
+    default: return <HomePage profile={profile} onOpenProfile={onOpenProfile} setError={setError} />;
   }
 }
 
-function HomePage({ profile, setError, onOpenProfile }: { profile: Profile; setError: (message: string) => void; onOpenProfile: (profileId: string) => void }) {
+function HomePage({ profile, onOpenProfile, setError }: { profile: Profile; onOpenProfile: (memberId: string) => void; setError: (message: string) => void }) {
   const [posts, setPosts] = useState<Publication[]>([]);
   const [loading, setLoading] = useState(true);
   const [compose, setCompose] = useState(false);
@@ -334,13 +345,13 @@ function HomePage({ profile, setError, onOpenProfile }: { profile: Profile; setE
     <PageHeading eyebrow="RGS COMMUNITY" title={<>Beranda<span className="title-dot">.</span></>} subtitle="Cerita, karya, dan momen dari keluarga besar RGS." action={<button className="button button-primary" onClick={() => setCompose((open) => !open)}><Plus size={17} /> Buat publikasi</button>} />
     {compose && <form className="compose-card" onSubmit={publish}><Field label="Judul publikasi" name="title" placeholder="Apa yang ingin kamu bagikan?" maxLength={100} required /><label className="field"><span>Cerita kamu</span><textarea name="body" placeholder="Tulis sesuatu untuk komunitas..." maxLength={2000} rows={3} required /></label><div className="compose-footer"><span><Globe2 size={14} /> Publik — terlihat oleh semua member</span><button className="button button-primary"><Send size={15} /> Publikasikan</button></div></form>}
     <div className="feed-toolbar"><div className="feed-tabs"><button className="active">Terbaru</button></div><label className="search-box"><Search size={16} /><input placeholder="Cari publikasi..." value={search} onChange={(event) => setSearch(event.target.value)} /></label></div>
-    <section className="feed-list">{loading ? <LoadingLine /> : filtered.length ? filtered.map((post) => <PublicationCard key={post.id} post={post} profileId={profile.id} onDelete={load} setError={setError} onOpenProfile={onOpenProfile} />) : <EmptyState title="Belum ada publikasi" body="Jadilah yang pertama membagikan kabar ke komunitas RGS." />}</section>
-    <PublicFilesFeed profileId={profile.id} setError={setError} onOpenProfile={onOpenProfile} />
+    <section className="feed-list">{loading ? <LoadingLine /> : filtered.length ? filtered.map((post) => <PublicationCard key={post.id} post={post} profileId={profile.id} onOpenProfile={onOpenProfile} onDelete={load} setError={setError} />) : <EmptyState title="Belum ada publikasi" body="Jadilah yang pertama membagikan kabar ke komunitas RGS." />}</section>
+    <PublicFilesFeed profileId={profile.id} onOpenProfile={onOpenProfile} setError={setError} />
     <div className="feed-footer">Menampilkan publikasi publik komunitas <span>RGS UNITY HUB</span></div>
   </>;
 }
 
-function DashboardPage({ profile, setError, onOpenProfile }: { profile: Profile; setError: (message: string) => void; onOpenProfile: (profileId: string) => void }) {
+function DashboardPage({ profile, onOpenProfile, setError }: { profile: Profile; onOpenProfile: (memberId: string) => void; setError: (message: string) => void }) {
   const [counts, setCounts] = useState({ members: 0, admins: 0, users: 0, posts: 0, files: 0, publicFiles: 0, privateFiles: 0, storageBytes: 0, invites: 0, inviteUses: 0, myPosts: 0 });
   const [recent, setRecent] = useState<Publication[]>([]);
   const load = useCallback(async () => {
@@ -400,19 +411,19 @@ function DashboardPage({ profile, setError, onOpenProfile }: { profile: Profile;
     <div className="welcome-banner"><div className="banner-watermark" /><div className="banner-copy"><span className="eyebrow">UNITY • GAMING • COMMUNITY</span><h2>Make your mark<br />in the community.</h2><p>Berbagi karya. Bangun koneksi. Tumbuh bersama RGS.</p></div><img src="/rgs-logo.png" alt="" /></div>
     <section className="stats-grid">{stats.map(({ label, value, icon: Icon, tone, note }) => <div className="stat-card" key={label}><div className={`stat-icon ${tone}`}><Icon size={18} /></div><span className="stat-label">{label}</span><strong>{value.toLocaleString("id-ID")}</strong><small>{note}</small></div>)}</section>
     <div className="section-heading"><div><span className="eyebrow">COMMUNITY PULSE</span><h2>Aktivitas terbaru</h2></div><span className="live-tag"><i /> LIVE FEED</span></div>
-    <div className="feed-list">{recent.length ? recent.map((post) => <PublicationCard key={post.id} post={post} profileId={profile.id} onDelete={load} setError={setError} onOpenProfile={onOpenProfile} />) : <EmptyState title="Ruang masih tenang" body="Publikasi terbaru akan muncul di sini." />}</div>
-    <PublicFilesFeed profileId={profile.id} setError={setError} onOpenProfile={onOpenProfile} />
+    <div className="feed-list">{recent.length ? recent.map((post) => <PublicationCard key={post.id} post={post} profileId={profile.id} onOpenProfile={onOpenProfile} onDelete={load} setError={setError} />) : <EmptyState title="Ruang masih tenang" body="Publikasi terbaru akan muncul di sini." />}</div>
+    <PublicFilesFeed profileId={profile.id} onOpenProfile={onOpenProfile} setError={setError} />
   </>;
 }
 
-function PublicFilesFeed({ profileId, setError, onOpenProfile }: { profileId: string; setError: (message: string) => void; onOpenProfile: (profileId: string) => void }) {
+function PublicFilesFeed({ profileId, onOpenProfile, setError }: { profileId: string; onOpenProfile: (memberId: string) => void; setError: (message: string) => void }) {
   type PublicFile = { id: string; owner_id: string; name: string; size_bytes: number; mime_type: string; created_at: string; storage_path: string; profiles?: { nickname: string } | { nickname: string }[] | null };
   const [files, setFiles] = useState<PublicFile[]>([]);
   const [loading, setLoading] = useState(true);
   const load = useCallback(async () => {
     if (!supabase) return;
     const { data, error } = await supabase.from("files")
-      .select("id, owner_id, name, size_bytes, mime_type, created_at, storage_path, profiles!files_owner_id_fkey(id, nickname)")
+      .select("id, owner_id, name, size_bytes, mime_type, created_at, storage_path, profiles!files_owner_id_fkey(nickname)")
       .eq("visibility", "public")
       .order("created_at", { ascending: false })
       .limit(6);
@@ -438,7 +449,7 @@ function PublicFilesFeed({ profileId, setError, onOpenProfile }: { profileId: st
   </>;
 }
 
-function PublicFileCard({ file, profileId, ownerId, ownerName, onOpenProfile, onDownload, setError }: { file: { id: string; name: string; mime_type: string; size_bytes: number; created_at: string; storage_path: string }; profileId: string; ownerId: string; ownerName: string; onOpenProfile: (profileId: string) => void; onDownload: () => Promise<string | null>; setError: (message: string) => void }) {
+function PublicFileCard({ file, profileId, ownerId, ownerName, onOpenProfile, onDownload, setError }: { file: { id: string; name: string; mime_type: string; size_bytes: number; created_at: string; storage_path: string }; profileId: string; ownerId: string; ownerName: string; onOpenProfile: (memberId: string) => void; onDownload: () => Promise<string | null>; setError: (message: string) => void }) {
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewFailed, setPreviewFailed] = useState(false);
   const [fileError, setFileError] = useState("");
@@ -483,10 +494,10 @@ function PublicFileCard({ file, profileId, ownerId, ownerName, onOpenProfile, on
           : <button className="public-file-type-preview" type="button" aria-label={`Lihat file ${file.name}`} title="Klik untuk melihat file" onClick={() => setPreviewOpen(true)}><div className={`file-type-icon ${kind}`}><TypeIcon size={20} /></div><span>{typeLabel}</span></button>}
     </div>
     {previewOpen && <FilePreviewModal file={file} ownerName={ownerName} onClose={() => setPreviewOpen(false)} />}
-    <div className="file-row-name"><button className="file-preview-name" type="button" onClick={() => setPreviewOpen(true)}>{file.name}</button><span>{typeLabel} · {formatBytes(file.size_bytes)} · {dateLabel(file.created_at)} · oleh <ProfileNameButton nickname={ownerName} onClick={() => onOpenProfile(ownerId)} /></span>{fileError && <span className="public-file-error" role="status">{missingObject ? "File tidak tersedia. Pemilik perlu menghapus entri lama di Storage, lalu mengunggah ulang file." : `File tidak dapat dimuat: ${fileError}`}</span>}</div>
+    <div className="file-row-name"><button className="file-preview-name" type="button" onClick={() => setPreviewOpen(true)}>{file.name}</button><span>{typeLabel} · {formatBytes(file.size_bytes)} · {dateLabel(file.created_at)} · oleh <button className="member-link" type="button" onClick={() => onOpenProfile(ownerId)}>{ownerName}</button></span>{fileError && <span className="public-file-error" role="status">{missingObject ? "File tidak tersedia. Pemilik perlu menghapus entri lama di Storage, lalu mengunggah ulang file." : `File tidak dapat dimuat: ${fileError}`}</span>}</div>
     <span className="visibility-chip public"><Globe2 size={13} />Public</span>
     <button className="icon-button" title={`Unduh ${file.name}`} aria-label={`Unduh ${file.name}`} onClick={() => void handleDownload()}><ArrowDownToLine size={17} /></button>
-  </article><Engagement targetType="file" targetId={file.id} profileId={profileId} setError={setError} onOpenProfile={onOpenProfile} /></div>;
+  </article><Engagement targetType="file" targetId={file.id} profileId={profileId} setError={setError} /></div>;
 }
 
 function FilePreviewModal({ file, ownerName, onClose }: { file: { name: string; mime_type: string; size_bytes: number; storage_path: string }; ownerName: string; onClose: () => void }) {
@@ -571,8 +582,9 @@ function FilePreviewModal({ file, ownerName, onClose }: { file: { name: string; 
   </div>;
 }
 
-function MembersPage({ profile, setError, onOpenProfile }: { profile: Profile; setError: (message: string) => void; onOpenProfile: (profileId: string) => void }) {
+function MembersPage({ profile, setError }: { profile: Profile; setError: (message: string) => void }) {
   const [members, setMembers] = useState<Profile[]>([]);
+  const [selected, setSelected] = useState<Profile | null>(null);
   const [query, setQuery] = useState("");
   const [role, setRole] = useState("all");
   const load = useCallback(async () => {
@@ -589,14 +601,16 @@ function MembersPage({ profile, setError, onOpenProfile }: { profile: Profile; s
     else {
       const updated = data as Profile;
       setMembers((current) => current.map((item) => item.id === updated.id ? updated : item));
+      setSelected((current) => current?.id === updated.id ? updated : current);
     }
   };
   const visible = members.filter((member) => member.nickname.toLowerCase().includes(query.toLowerCase()) && (role === "all" || member.role === role));
   return <>
     <PageHeading eyebrow="OUR PEOPLE" title={<>Members<span className="title-dot">.</span></>} subtitle="Kenali para pemain dan kreator di balik komunitas RGS." />
     <div className="members-toolbar"><label className="search-box"><Search size={16} /><input placeholder="Cari nickname..." value={query} onChange={(event) => setQuery(event.target.value)} /></label><select className="filter-select" value={role} onChange={(event) => setRole(event.target.value)}><option value="all">Semua role</option><option value="owner">Owner</option><option value="admin">Admin</option><option value="user">User</option></select><span className="member-count">{visible.length} member</span></div>
-    <div className="members-grid">{visible.map((member) => <article className="member-card" key={member.id}><div className="member-card-top"><ProfileAvatarButton profile={member} onOpen={() => onOpenProfile(member.id)} large /><span className="online-badge"><i /> MEMBER</span></div><h3><ProfileNameButton nickname={member.nickname} onClick={() => onOpenProfile(member.id)} /></h3><RoleBadge role={member.role} /><div className="member-card-meta"><span>Bergabung</span><strong>{dateLabel(member.created_at)}</strong></div>{profile.role === "owner" && member.id !== profile.id && <label className="role-control"><span>Role member</span><select value={member.role} onChange={(event) => void updateRole(member, event.target.value as Role)}><option value="user">User</option><option value="admin">Admin</option><option value="owner">Owner</option></select></label>}{member.id === profile.id && <div className="role-control"><span>Role akun Anda</span><strong>Dikelola melalui prosedur pemulihan owner</strong></div>}<button className="button button-outline member-profile" onClick={() => onOpenProfile(member.id)}>Lihat profil <ArrowUpRight size={14} /></button></article>)}</div>
+    <div className="members-grid">{visible.map((member) => <article className="member-card" key={member.id}><div className="member-card-top"><Avatar profile={member} large /><span className="online-badge"><i /> MEMBER</span></div><h3>{member.nickname}</h3><RoleBadge role={member.role} /><div className="member-card-meta"><span>Bergabung</span><strong>{dateLabel(member.created_at)}</strong></div>{profile.role === "owner" && member.id !== profile.id && <label className="role-control"><span>Role member</span><select value={member.role} onChange={(event) => void updateRole(member, event.target.value as Role)}><option value="user">User</option><option value="admin">Admin</option><option value="owner">Owner</option></select></label>}{member.id === profile.id && <div className="role-control"><span>Role akun Anda</span><strong>Dikelola melalui prosedur pemulihan owner</strong></div>}<button className="button button-outline member-profile" onClick={() => setSelected(member)}>Lihat profil <ArrowUpRight size={14} /></button></article>)}</div>
     {!visible.length && <EmptyState title="Member tidak ditemukan" body="Coba ubah kata pencarian atau filter role." />}
+    {selected && <div className="modal-backdrop" onClick={() => setSelected(null)}><section className="member-modal" role="dialog" aria-modal="true" aria-label={`Profil ${selected.nickname}`} onClick={(event) => event.stopPropagation()}><button className="modal-close icon-button" onClick={() => setSelected(null)} aria-label="Tutup"><X size={18} /></button><div className="modal-avatar"><Avatar profile={selected} large /></div><h2>{selected.nickname}</h2><RoleBadge role={selected.role} /><p>{selected.bio || "Member komunitas RGS Unity Hub."}</p><div className="member-card-meta"><span>Bergabung</span><strong>{dateLabel(selected.created_at)}</strong></div></section></div>}
   </>;
 }
 
@@ -634,8 +648,8 @@ function StorageFilePreview({ file, onOpen }: { file: { name: string; mime_type:
   </button>;
 }
 
-function StoragePage({ profile, setError, onOpenProfile }: { profile: Profile; setError: (message: string) => void; onOpenProfile: (profileId: string) => void }) {
-  type StoredFile = { id: string; owner_id: string; name: string; mime_type: string; size_bytes: number; visibility: "public" | "private"; created_at: string; storage_path: string; profiles?: { id: string; nickname: string } | { id: string; nickname: string }[] | null };
+function StoragePage({ profile, onOpenProfile, setError }: { profile: Profile; onOpenProfile: (memberId: string) => void; setError: (message: string) => void }) {
+  type StoredFile = { id: string; owner_id: string; name: string; mime_type: string; size_bytes: number; visibility: "public" | "private"; created_at: string; storage_path: string; profiles?: { nickname: string } | { nickname: string }[] | null };
   const [files, setFiles] = useState<StoredFile[]>([]);
   const [sharedFiles, setSharedFiles] = useState<StoredFile[]>([]);
   const [previewFile, setPreviewFile] = useState<StoredFile | null>(null);
@@ -644,7 +658,7 @@ function StoragePage({ profile, setError, onOpenProfile }: { profile: Profile; s
   const [query, setQuery] = useState("");
   const load = useCallback(async () => {
     if (!supabase) return;
-    const { data, error } = await supabase.from("files").select("id, owner_id, name, mime_type, size_bytes, visibility, created_at, storage_path, profiles!files_owner_id_fkey(id, nickname)").order("created_at", { ascending: false });
+    const { data, error } = await supabase.from("files").select("id, owner_id, name, mime_type, size_bytes, visibility, created_at, storage_path, profiles!files_owner_id_fkey(nickname)").order("created_at", { ascending: false });
     if (error) { setError(error.message); return; }
     const visibleFiles = (data ?? []) as StoredFile[];
     setFiles(visibleFiles.filter((file) => file.owner_id === profile.id));
@@ -710,16 +724,16 @@ function StoragePage({ profile, setError, onOpenProfile }: { profile: Profile; s
     <div className="storage-summary"><div className="storage-summary-icon"><Folder size={21} /></div><div><span>Storage pribadi</span><strong>{formatBytes(used)} <small>digunakan</small></strong></div><div className="storage-progress"><i style={{ width: `${Math.min(used / (1024 * 1024 * 1024) * 100, 100)}%` }} /></div><small>Batas upload per file: 25 MB</small></div>
     <form className="upload-panel" onSubmit={upload}><div className="upload-icon"><Upload size={19} /></div><div className="upload-copy"><strong>Upload file baru</strong><span>Public dapat dilihat dan diunduh anggota; Private hanya terlihat oleh kamu.</span></div><select className="filter-select" name="visibility" defaultValue="private" disabled={busy}><option value="private">Private</option><option value="public">Public</option></select><label className="button button-primary upload-button"><Upload size={16} />{busy ? "Mengunggah..." : "Pilih file"}<input name="upload" type="file" accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm,application/pdf,text/plain,application/zip" required disabled={busy} /></label><button className="button button-outline" disabled={busy}>Upload</button></form>
     <div className="members-toolbar storage-toolbar"><label className="search-box"><Search size={16} /><input placeholder="Cari file..." value={query} onChange={(event) => setQuery(event.target.value)} /></label><span className="member-count">{files.length} file</span></div>
-    <div className="file-list">{filtered.map((file) => <div className="storage-file-entry" key={file.id}><div className="file-row"><StorageFilePreview file={file} onOpen={() => setPreviewFile(file)} /><div className="file-row-name"><button className="file-preview-name" type="button" onClick={() => setPreviewFile(file)}>{file.name}</button><span>{formatBytes(file.size_bytes)} · {dateLabel(file.created_at)}</span></div><button className={`visibility-chip ${file.visibility} visibility-toggle`} disabled={visibilityBusyId === file.id} onClick={() => void toggleVisibility(file)} title={`Ubah menjadi ${file.visibility === "public" ? "Private" : "Public"}`} aria-label={`${file.name}: ${file.visibility}. Ubah menjadi ${file.visibility === "public" ? "Private" : "Public"}`}>{file.visibility === "public" ? <Globe2 size={13} /> : <LockKeyhole size={13} />}{visibilityBusyId === file.id ? "Menyimpan..." : file.visibility}</button><div className="file-actions"><button className="icon-button" title="Unduh" onClick={() => void download(file.storage_path)}><ArrowDownToLine size={17} /></button><button className="icon-button" title="Hapus" onClick={() => void remove(file)}><X size={17} /></button></div></div><Engagement targetType="file" targetId={file.id} profileId={profile.id} setError={setError} onOpenProfile={onOpenProfile} /></div>)}</div>
+    <div className="file-list">{filtered.map((file) => <div className="storage-file-entry" key={file.id}><div className="file-row"><StorageFilePreview file={file} onOpen={() => setPreviewFile(file)} /><div className="file-row-name"><button className="file-preview-name" type="button" onClick={() => setPreviewFile(file)}>{file.name}</button><span>{formatBytes(file.size_bytes)} · {dateLabel(file.created_at)}</span></div><button className={`visibility-chip ${file.visibility} visibility-toggle`} disabled={visibilityBusyId === file.id} onClick={() => void toggleVisibility(file)} title={`Ubah menjadi ${file.visibility === "public" ? "Private" : "Public"}`} aria-label={`${file.name}: ${file.visibility}. Ubah menjadi ${file.visibility === "public" ? "Private" : "Public"}`}>{file.visibility === "public" ? <Globe2 size={13} /> : <LockKeyhole size={13} />}{visibilityBusyId === file.id ? "Menyimpan..." : file.visibility}</button><div className="file-actions"><button className="icon-button" title="Unduh" onClick={() => void download(file.storage_path)}><ArrowDownToLine size={17} /></button><button className="icon-button" title="Hapus" onClick={() => void remove(file)}><X size={17} /></button></div></div><Engagement targetType="file" targetId={file.id} profileId={profile.id} setError={setError} /></div>)}</div>
     {!filtered.length && <EmptyState title="Belum ada file" body="Upload file pertamamu untuk mulai menggunakan storage." />}
     <div className="section-heading"><div><span className="eyebrow">SHARED WITH COMMUNITY</span><h2>File publik</h2></div><span className="member-count">{sharedFiles.length} file</span></div>
-    <div className="file-list">{sharedFiles.filter((file) => file.name.toLowerCase().includes(query.toLowerCase())).map((file) => { const joinedProfile = Array.isArray(file.profiles) ? file.profiles[0] : file.profiles; return <div className="storage-file-entry" key={file.id}><div className="file-row"><StorageFilePreview file={file} onOpen={() => setPreviewFile(file)} /><div className="file-row-name"><button className="file-preview-name" type="button" onClick={() => setPreviewFile(file)}>{file.name}</button><span>{formatBytes(file.size_bytes)} · {dateLabel(file.created_at)} · oleh <ProfileNameButton nickname={joinedProfile?.nickname ?? "Member"} onClick={() => onOpenProfile(file.owner_id)} /></span></div>{file.owner_id === profile.id ? <button className="visibility-chip public visibility-toggle" disabled={visibilityBusyId === file.id} onClick={() => void toggleVisibility(file)} title="Ubah menjadi Private" aria-label={`${file.name}: Public. Ubah menjadi Private`}><Globe2 size={13} />{visibilityBusyId === file.id ? "Menyimpan..." : "Public"}</button> : <span className="visibility-chip public"><Globe2 size={13} />Public</span>}<div className="file-actions"><button className="icon-button" title={`Unduh ${file.name}`} onClick={() => void download(file.storage_path)}><ArrowDownToLine size={17} /></button></div></div><Engagement targetType="file" targetId={file.id} profileId={profile.id} setError={setError} onOpenProfile={onOpenProfile} /></div>; })}</div>
+    <div className="file-list">{sharedFiles.filter((file) => file.name.toLowerCase().includes(query.toLowerCase())).map((file) => { const joinedProfile = Array.isArray(file.profiles) ? file.profiles[0] : file.profiles; return <div className="storage-file-entry" key={file.id}><div className="file-row"><StorageFilePreview file={file} onOpen={() => setPreviewFile(file)} /><div className="file-row-name"><button className="file-preview-name" type="button" onClick={() => setPreviewFile(file)}>{file.name}</button><span>{formatBytes(file.size_bytes)} · {dateLabel(file.created_at)} · oleh <button className="member-link" type="button" onClick={() => onOpenProfile(file.owner_id)}>{joinedProfile?.nickname ?? "Member"}</button></span></div>{file.owner_id === profile.id ? <button className="visibility-chip public visibility-toggle" disabled={visibilityBusyId === file.id} onClick={() => void toggleVisibility(file)} title="Ubah menjadi Private" aria-label={`${file.name}: Public. Ubah menjadi Private`}><Globe2 size={13} />{visibilityBusyId === file.id ? "Menyimpan..." : "Public"}</button> : <span className="visibility-chip public"><Globe2 size={13} />Public</span>}<div className="file-actions"><button className="icon-button" title={`Unduh ${file.name}`} onClick={() => void download(file.storage_path)}><ArrowDownToLine size={17} /></button></div></div><Engagement targetType="file" targetId={file.id} profileId={profile.id} setError={setError} /></div>; })}</div>
     {!sharedFiles.some((file) => file.name.toLowerCase().includes(query.toLowerCase())) && <EmptyState title="Belum ada file publik" body="File yang diunggah dengan visibilitas Public akan muncul di sini." />}
     {previewFile && <FilePreviewModal file={previewFile} ownerName={previewFile.owner_id === profile.id ? profile.nickname : (Array.isArray(previewFile.profiles) ? previewFile.profiles[0]?.nickname : previewFile.profiles?.nickname) ?? "Member"} onClose={() => setPreviewFile(null)} />}
   </>;
 }
 
-function YouTubePage({ profile, setError, onOpenProfile }: { profile: Profile; setError: (message: string) => void; onOpenProfile: (profileId: string) => void }) {
+function YouTubePage({ profile, onOpenProfile, setError }: { profile: Profile; onOpenProfile: (memberId: string) => void; setError: (message: string) => void }) {
   const [videos, setVideos] = useState<Publication[]>([]);
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
@@ -763,24 +777,24 @@ function YouTubePage({ profile, setError, onOpenProfile }: { profile: Profile; s
     <PageHeading eyebrow="RGS VIDEO CHANNEL" title={<>YouTube<span className="title-dot">.</span></>} subtitle="Temukan video pilihan dan bagikan momen gaming kamu." />
     <form className="youtube-add" onSubmit={addVideo}><div className="youtube-add-heading"><div className="youtube-icon"><Youtube size={20} /></div><div><strong>Bagikan video YouTube</strong><span>Video Public terlihat semua anggota; Private hanya terlihat oleh kamu.</span></div></div><div className="youtube-form-fields"><input value={url} onChange={(event) => setUrl(event.target.value)} placeholder="Tempel URL YouTube..." aria-label="URL YouTube" required /><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Judul video (opsional)" aria-label="Judul video" /><select className="filter-select" value={visibility} onChange={(event) => setVisibility(event.target.value === "private" ? "private" : "public")}><option value="public">Public</option><option value="private">Private</option></select><button className="button button-primary"><Plus size={16} /> Tambahkan</button></div><div className="converter-note"><CircleHelp size={14} /> Converter/download video tidak disediakan. Tonton atau buka video melalui YouTube sesuai ketentuan layanan.</div></form>
     <div className="section-heading"><div><span className="eyebrow">CURATED BY MEMBERS</span><h2>Video komunitas</h2></div><span className="member-count">{videos.length} video</span></div>
-    <div className="video-grid">{videos.filter((video) => video.visibility === "public" || video.owner_id === profile.id).map((video) => { const videoId = getYouTubeVideoId(video.body); const authorId = video.profiles?.id ?? video.owner_id; return <article className="video-card" key={video.id}><div className="video-frame">{videoId ? <YouTubePlayer videoId={videoId} title={video.title} /> : <div className="video-unavailable"><Film size={28} /></div>}</div>{videoId && <div className="video-card-link"><YouTubeWatchLink videoId={videoId} /></div>}<div className="video-info"><div><h3>{video.title}</h3><span>oleh <ProfileNameButton nickname={video.profiles?.nickname ?? "Member"} onClick={() => onOpenProfile(authorId)} /> · {dateLabel(video.created_at)}</span></div>{video.owner_id === profile.id ? <button className={`visibility-chip ${video.visibility} visibility-toggle`} disabled={visibilityBusyId === video.id} onClick={() => void toggleVideoVisibility(video)} title={`Ubah menjadi ${video.visibility === "public" ? "Private" : "Public"}`} aria-label={`${video.title}: ${video.visibility}. Ubah menjadi ${video.visibility === "public" ? "Private" : "Public"}`}>{video.visibility === "public" ? <Globe2 size={13} /> : <LockKeyhole size={13} />}{visibilityBusyId === video.id ? "Menyimpan..." : video.visibility}</button> : <span className={`visibility-chip ${video.visibility}`}>{video.visibility === "public" ? <Globe2 size={13} /> : <LockKeyhole size={13} />}{video.visibility}</span>}{video.owner_id === profile.id && <button className="icon-button" title="Hapus publikasi" onClick={() => void deleteVideo(video.id)}><X size={16} /></button>}</div><Engagement targetType="publication" targetId={video.id} profileId={profile.id} setError={setError} onOpenProfile={onOpenProfile} /></article>; })}</div>
+    <div className="video-grid">{videos.filter((video) => video.visibility === "public" || video.owner_id === profile.id).map((video) => { const videoId = getYouTubeVideoId(video.body); return <article className="video-card" key={video.id}><div className="video-frame">{videoId ? <YouTubePlayer videoId={videoId} title={video.title} /> : <div className="video-unavailable"><Film size={28} /></div>}</div>{videoId && <div className="video-card-link"><YouTubeWatchLink videoId={videoId} /></div>}<div className="video-info"><div><h3>{video.title}</h3><span>oleh <button className="member-link" type="button" onClick={() => onOpenProfile(video.owner_id)}>{video.profiles?.nickname ?? "Member"}</button> · {dateLabel(video.created_at)}</span></div>{video.owner_id === profile.id ? <button className={`visibility-chip ${video.visibility} visibility-toggle`} disabled={visibilityBusyId === video.id} onClick={() => void toggleVideoVisibility(video)} title={`Ubah menjadi ${video.visibility === "public" ? "Private" : "Public"}`} aria-label={`${video.title}: ${video.visibility}. Ubah menjadi ${video.visibility === "public" ? "Private" : "Public"}`}>{video.visibility === "public" ? <Globe2 size={13} /> : <LockKeyhole size={13} />}{visibilityBusyId === video.id ? "Menyimpan..." : video.visibility}</button> : <span className={`visibility-chip ${video.visibility}`}>{video.visibility === "public" ? <Globe2 size={13} /> : <LockKeyhole size={13} />}{video.visibility}</span>}{video.owner_id === profile.id && <button className="icon-button" title="Hapus publikasi" onClick={() => void deleteVideo(video.id)}><X size={16} /></button>}</div><Engagement targetType="publication" targetId={video.id} profileId={profile.id} setError={setError} /></article>; })}</div>
     {!videos.length && <EmptyState title="Belum ada video" body="Jadilah yang pertama membagikan video YouTube komunitas." />}
   </>;
 }
 
-function ChatPage({ profile, setError, onOpenProfile }: { profile: Profile; setError: (message: string) => void; onOpenProfile: (profileId: string) => void }) {
-  const [messages, setMessages] = useState<Array<{ id: string; body: string; created_at: string; profiles?: { id: string; nickname: string; role: Role; avatar_url: string | null } }>>([]);
+function ChatPage({ profile, setError }: { profile: Profile; setError: (message: string) => void }) {
+  const [messages, setMessages] = useState<Array<{ id: string; body: string; created_at: string; profiles?: { nickname: string; role: Role } }>>([]);
   const [text, setText] = useState("");
   const load = useCallback(async () => {
     if (!supabase) return;
-    const { data, error } = await supabase.from("chat_messages").select("id, body, created_at, profiles(id, nickname, role, avatar_url)").eq("room_id", "00000000-0000-0000-0000-000000000001").order("created_at", { ascending: true }).limit(100);
+    const { data, error } = await supabase.from("chat_messages").select("id, body, created_at, profiles(nickname, role)").eq("room_id", "00000000-0000-0000-0000-000000000001").order("created_at", { ascending: true }).limit(100);
     if (error) { setError(error.message); return; }
     const normalized = Array.isArray(data) ? data.flatMap((item) => {
       const row = item as unknown as Record<string, unknown>;
       const joined = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
       const author = joined && typeof joined === "object" ? joined as Record<string, unknown> : null;
       if (typeof row.id !== "string" || typeof row.body !== "string" || typeof row.created_at !== "string") return [];
-      return [{ id: row.id, body: row.body, created_at: row.created_at, profiles: author && typeof author.id === "string" && typeof author.nickname === "string" && isRole(author.role) ? { id: author.id, nickname: author.nickname, role: author.role, avatar_url: typeof author.avatar_url === "string" ? author.avatar_url : null } : undefined }];
+      return [{ id: row.id, body: row.body, created_at: row.created_at, profiles: author && typeof author.nickname === "string" && isRole(author.role) ? { nickname: author.nickname, role: author.role } : undefined }];
     }) : [];
     setMessages(normalized);
   }, [setError]);
@@ -798,24 +812,43 @@ function ChatPage({ profile, setError, onOpenProfile }: { profile: Profile; setE
   };
   return <>
     <PageHeading eyebrow="SAY HELLO" title={<>Community chat<span className="title-dot">.</span></>} subtitle="Ruang obrolan umum RGS, live bersama komunitas." />
-    <section className="chat-panel"><div className="chat-header"><div className="chat-room-icon"><MessageCircle size={18} /></div><div><strong># general</strong><span><i /> Ruang publik · {messages.length} pesan dimuat</span></div><button className="icon-button" title="Info"><MoreHorizontal size={19} /></button></div><div className="chat-messages">{messages.map((message) => {
-      const author = message.profiles;
-      return <article className={`chat-message ${author?.nickname === profile.nickname ? "mine" : ""}`} key={message.id}>{author ? <ProfileAvatarButton profile={author} onOpen={() => onOpenProfile(author.id)} /> : <div className="chat-avatar">?</div>}<div className="chat-message-content"><div><strong>{author ? <ProfileNameButton nickname={author.nickname} onClick={() => onOpenProfile(author.id)} /> : "Member"} </strong>{author?.role && <RoleBadge role={author.role} />}<time>{new Date(message.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</time></div><p>{message.body}</p></div></article>;
-    })}</div><form className="chat-composer" onSubmit={send}><input value={text} onChange={(event) => setText(event.target.value)} placeholder="Kirim pesan ke #general..." maxLength={2000} /><button className="send-button" disabled={!text.trim()} aria-label="Kirim pesan"><Send size={17} /></button></form></section>
+    <section className="chat-panel"><div className="chat-header"><div className="chat-room-icon"><MessageCircle size={18} /></div><div><strong># general</strong><span><i /> Ruang publik · {messages.length} pesan dimuat</span></div><button className="icon-button" title="Info"><MoreHorizontal size={19} /></button></div><div className="chat-messages">{messages.map((message) => <article className={`chat-message ${message.profiles?.nickname === profile.nickname ? "mine" : ""}`} key={message.id}><div className="chat-avatar">{(message.profiles?.nickname ?? "?").slice(0, 1).toUpperCase()}</div><div className="chat-message-content"><div><strong>{message.profiles?.nickname ?? "Member"} </strong>{message.profiles?.role && <RoleBadge role={message.profiles.role} />}<time>{new Date(message.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</time></div><p>{message.body}</p></div></article>)}</div><form className="chat-composer" onSubmit={send}><input value={text} onChange={(event) => setText(event.target.value)} placeholder="Kirim pesan ke #general..." maxLength={2000} /><button className="send-button" disabled={!text.trim()} aria-label="Kirim pesan"><Send size={17} /></button></form></section>
     <p className="chat-notice"><Shield size={14} /> Jaga ruang tetap nyaman. Jangan kirim password, data pribadi, atau informasi sensitif.</p>
   </>;
 }
 
-function ProfilePage({ profile, setProfile, setError }: { profile: Profile; setProfile: (profile: Profile) => void; setError: (message: string) => void }) {
+function ProfilePage({ profile, viewedProfileId, setProfile, setError }: { profile: Profile; viewedProfileId: string | null; setProfile: (profile: Profile) => void; setError: (message: string) => void }) {
+  const targetProfileId = viewedProfileId || profile.id;
+  const isOwnProfile = targetProfileId === profile.id;
+  const [displayedProfile, setDisplayedProfile] = useState<Profile>(profile);
   const [bio, setBio] = useState(profile.bio ?? "");
   const [saving, setSaving] = useState(false);
   const [publications, setPublications] = useState(0);
   const loadPublicationCount = useCallback(async () => {
     if (!supabase) return;
-    const { count, error } = await supabase.from("publications").select("id", { count: "exact", head: true }).eq("owner_id", profile.id);
+    const { count, error } = await supabase.from("publications").select("id", { count: "exact", head: true }).eq("owner_id", targetProfileId);
     if (error) setError(error.message); else setPublications(count ?? 0);
-  }, [profile.id, setError]);
+  }, [targetProfileId, setError]);
   useEffect(() => { void loadPublicationCount(); }, [loadPublicationCount]);
+  useEffect(() => {
+    setBio(isOwnProfile ? profile.bio ?? "" : "");
+    if (isOwnProfile) {
+      setDisplayedProfile(profile);
+      return;
+    }
+    if (!supabase) return;
+    let active = true;
+    supabase.from("profiles").select("*").eq("id", targetProfileId).single().then(({ data, error }) => {
+      if (!active) return;
+      if (error) setError(error.message);
+      else if (data) {
+        const member = data as Profile;
+        setDisplayedProfile(member);
+        setBio(member.bio ?? "");
+      }
+    });
+    return () => { active = false; };
+  }, [isOwnProfile, profile, setError, targetProfileId]);
   useRealtimeRefresh("rgs-profile-publications", PUBLICATION_TABLE, loadPublicationCount, undefined, setError);
   const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault(); if (!supabase) return;
@@ -836,52 +869,9 @@ function ProfilePage({ profile, setProfile, setError }: { profile: Profile; setP
     if (error) setError(error.message); else setProfile(updated as Profile);
   };
   return <>
-    <PageHeading eyebrow="YOUR IDENTITY" title={<>Profil saya<span className="title-dot">.</span></>} subtitle="Atur identitas yang terlihat oleh komunitas." />
-    <section className="profile-card"><div className="profile-cover"><div className="cover-mark" /></div><div className="profile-main"><label className="profile-avatar-upload"><Avatar profile={profile} large /><input type="file" accept="image/*" onChange={(event) => void avatarUpload(event as unknown as FormEvent<HTMLInputElement>)} /><span><Upload size={14} /></span></label><div className="profile-info"><h2>{profile.nickname}</h2><RoleBadge role={profile.role} /><p>{profile.bio || "Belum ada bio. Ceritakan sedikit tentang dirimu."}</p><div className="profile-meta"><span>Member sejak {dateLabel(profile.created_at)}</span><span><Sparkles size={14} /> {publications} publikasi</span></div></div></div><form className="profile-edit" onSubmit={save}><label className="field"><span>Bio</span><textarea value={bio} onChange={(event) => setBio(event.target.value)} maxLength={240} rows={3} placeholder="Ceritakan tentang dirimu..." /></label><div className="profile-edit-footer"><span>{bio.length}/240 karakter · Nickname dikelola admin</span><button className="button button-primary" disabled={saving}><Check size={16} />{saving ? "Menyimpan..." : "Simpan profil"}</button></div></form></section>
+    <PageHeading eyebrow={isOwnProfile ? "YOUR IDENTITY" : "MEMBER PROFILE"} title={isOwnProfile ? <>Profil saya<span className="title-dot">.</span></> : <>Profil member<span className="title-dot">.</span></>} subtitle={isOwnProfile ? "Atur identitas yang terlihat oleh komunitas." : "Identitas member dari data komunitas RGS."} />
+    <section className="profile-card"><div className="profile-cover"><div className="cover-mark" /></div><div className="profile-main">{isOwnProfile ? <label className="profile-avatar-upload"><Avatar profile={displayedProfile} large /><input type="file" accept="image/*" onChange={(event) => void avatarUpload(event as unknown as FormEvent<HTMLInputElement>)} /><span><Upload size={14} /></span></label> : <Avatar profile={displayedProfile} large />}<div className="profile-info"><h2>{displayedProfile.nickname}</h2><RoleBadge role={displayedProfile.role} /><p>{displayedProfile.bio || "Belum ada bio. Ceritakan sedikit tentang dirimu."}</p><div className="profile-meta"><span>Member sejak {dateLabel(displayedProfile.created_at)}</span><span><Sparkles size={14} /> {publications} publikasi</span></div></div></div>{isOwnProfile && <form className="profile-edit" onSubmit={save}><label className="field"><span>Bio</span><textarea value={bio} onChange={(event) => setBio(event.target.value)} maxLength={240} rows={3} placeholder="Ceritakan tentang dirimu..." /></label><div className="profile-edit-footer"><span>{bio.length}/240 karakter · Nickname dikelola admin</span><button className="button button-primary" disabled={saving}><Check size={16} />{saving ? "Menyimpan..." : "Simpan profil"}</button></div></form>}</section>
   </>;
-}
-
-function MemberProfileDialog({ profileId, onClose, setError }: { profileId: string; onClose: () => void; setError: (message: string) => void }) {
-  const [member, setMember] = useState<Profile | null>(null);
-  const [publications, setPublications] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const load = useCallback(async () => {
-    if (!supabase) return;
-    const [memberResult, publicationResult] = await Promise.all([
-      supabase.from("profiles").select("id, nickname, avatar_url, bio, role, created_at").eq("id", profileId).maybeSingle(),
-      supabase.from("publications").select("id", { count: "exact", head: true }).eq("owner_id", profileId).eq("visibility", "public"),
-    ]);
-    const queryError = memberResult.error ?? publicationResult.error;
-    if (queryError) setError(queryError.message);
-    else if (!memberResult.data) {
-      setMember(null);
-      setError("Profil member tidak ditemukan.");
-    } else {
-      setMember(memberResult.data as Profile);
-      setPublications(publicationResult.count ?? 0);
-    }
-    setLoading(false);
-  }, [profileId, setError]);
-  useEffect(() => { void load(); }, [load]);
-  useRealtimeRefresh(`rgs-member-profile-${profileId}`, PROFILE_PUBLICATION_TABLES, load, undefined, setError);
-  useEffect(() => {
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [onClose]);
-
-  return <div className="modal-backdrop" onClick={onClose}><section className="member-modal" role="dialog" aria-modal="true" aria-label={`Profil ${member?.nickname ?? "member"}`} onClick={(event) => event.stopPropagation()}>
-    <button className="modal-close icon-button" onClick={onClose} aria-label="Tutup"><X size={18} /></button>
-    {loading ? <div className="loading-line"><span /> Memuat profil member...</div> : member ? <>
-      <div className="modal-avatar"><Avatar profile={member} large /></div>
-      <h2>{member.nickname}</h2>
-      <RoleBadge role={member.role} />
-      <p>{member.bio || "Member komunitas RGS Unity Hub."}</p>
-      <div className="member-card-meta"><span>Bergabung</span><strong>{dateLabel(member.created_at)}</strong><span>Publikasi publik</span><strong>{publications}</strong></div>
-    </> : <EmptyState title="Profil tidak tersedia" body="Data member mungkin sudah tidak tersedia." />}
-  </section></div>;
 }
 
 function InvitesPage({ profile, setError }: { profile: Profile; setError: (message: string) => void }) {
@@ -951,7 +941,7 @@ function SettingsPage() {
   </>;
 }
 
-function PublicationCard({ post, profileId, onDelete, setError, onOpenProfile }: { post: Publication; profileId: string; onDelete: () => void | Promise<void>; setError: (message: string) => void; onOpenProfile: (profileId: string) => void }) {
+function PublicationCard({ post, profileId, onOpenProfile, onDelete, setError }: { post: Publication; profileId: string; onOpenProfile: (memberId: string) => void; onDelete: () => void | Promise<void>; setError: (message: string) => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const canDelete = post.owner_id === profileId;
 
@@ -972,16 +962,17 @@ function PublicationCard({ post, profileId, onDelete, setError, onOpenProfile }:
   };
 
   const videoId = post.kind === "youtube" ? getYouTubeVideoId(post.body) : null;
-  const author = post.profiles ?? { id: post.owner_id, nickname: "Member", avatar_url: null, role: "user" as Role };
-  return <article className="post-card" id={`publication-${post.id}`}><header className="post-header"><ProfileAvatarButton profile={author} onOpen={() => onOpenProfile(author.id)} /><div className="post-author"><strong><ProfileNameButton nickname={author.nickname} onClick={() => onOpenProfile(author.id)} /> <RoleBadge role={author.role} /></strong><span>{dateLabel(post.created_at)} · {post.kind === "youtube" ? "Video YouTube" : "Publikasi"}</span></div><div className="post-menu-wrap"><button className="icon-button post-more" aria-label={`Opsi publikasi ${post.title}`} aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}><MoreHorizontal size={19} /></button>{menuOpen && <div className="post-menu" role="menu"><button role="menuitem" onClick={() => void copyLink()}><Copy size={14} />Salin tautan</button>{canDelete && <button className="danger-action" role="menuitem" onClick={() => void deletePublication()}><Trash2 size={14} />Hapus publikasi</button>}</div>}</div></header><div className="post-content"><h3>{post.title}</h3>{videoId ? <><div className="post-video-frame"><YouTubePlayer videoId={videoId} title={post.title} /></div><YouTubeWatchLink videoId={videoId} /></> : <p>{post.body}</p>}</div><Engagement targetType="publication" targetId={post.id} profileId={profileId} setError={setError} onOpenProfile={onOpenProfile} /></article>;
+  const openAuthorProfile = () => onOpenProfile(post.owner_id);
+  const author = { nickname: post.profiles?.nickname ?? "Member", avatar_url: post.profiles?.avatar_url ?? null };
+  return <article className="post-card" id={`publication-${post.id}`}><header className="post-header"><button className="member-link-avatar" type="button" onClick={openAuthorProfile} aria-label={`Lihat profil ${author.nickname}`}><Avatar profile={author} /></button><div className="post-author"><strong><button className="member-link" type="button" onClick={openAuthorProfile}>{author.nickname}</button> <RoleBadge role={post.profiles?.role ?? "user"} /></strong><span>{dateLabel(post.created_at)} · {post.kind === "youtube" ? "Video YouTube" : "Publikasi"}</span></div><div className="post-menu-wrap"><button className="icon-button post-more" aria-label={`Opsi publikasi ${post.title}`} aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}><MoreHorizontal size={19} /></button>{menuOpen && <div className="post-menu" role="menu"><button role="menuitem" onClick={() => void copyLink()}><Copy size={14} />Salin tautan</button>{canDelete && <button className="danger-action" role="menuitem" onClick={() => void deletePublication()}><Trash2 size={14} />Hapus publikasi</button>}</div>}</div></header><div className="post-content"><h3>{post.title}</h3>{videoId ? <><div className="post-video-frame"><YouTubePlayer videoId={videoId} title={post.title} /></div><YouTubeWatchLink videoId={videoId} /></> : <p>{post.body}</p>}</div><Engagement targetType="publication" targetId={post.id} profileId={profileId} setError={setError} /></article>;
 }
 
-function Engagement({ targetType, targetId, profileId, setError, onOpenProfile }: { targetType: "publication" | "file"; targetId: string; profileId: string; setError: (message: string) => void; onOpenProfile: (profileId: string) => void }) {
+function Engagement({ targetType, targetId, profileId, setError }: { targetType: "publication" | "file"; targetId: string; profileId: string; setError: (message: string) => void }) {
   const [liked, setLiked] = useState(false);
   const [likes, setLikes] = useState(0);
   const [commentCount, setCommentCount] = useState(0);
   const [commentsOpen, setCommentsOpen] = useState(false);
-  const [comments, setComments] = useState<Array<{ id: string; body: string; created_at: string; userId: string | null; nickname: string }>>([]);
+  const [comments, setComments] = useState<Array<{ id: string; body: string; created_at: string; nickname: string }>>([]);
   const [commentText, setCommentText] = useState("");
   const targetColumn = targetType === "publication" ? "publication_id" : "file_id";
   const reactionTable = targetType === "publication" ? "publication_reactions" : "file_reactions";
@@ -1006,14 +997,14 @@ function Engagement({ targetType, targetId, profileId, setError, onOpenProfile }
 
   const loadComments = useCallback(async () => {
     if (!supabase) return;
-    const { data, error } = await supabase.from(commentTable).select("id, user_id, body, created_at, profiles(id, nickname)").eq(targetColumn, targetId).order("created_at", { ascending: true }).limit(50);
+    const { data, error } = await supabase.from(commentTable).select("id, body, created_at, profiles(nickname)").eq(targetColumn, targetId).order("created_at", { ascending: true }).limit(50);
     if (error) { setError(error.message); return; }
     const normalized = (data ?? []).flatMap((value) => {
       const row = value as unknown as Record<string, unknown>;
       const joined = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
       const author = joined && typeof joined === "object" ? joined as Record<string, unknown> : null;
       if (typeof row.id !== "string" || typeof row.body !== "string" || typeof row.created_at !== "string") return [];
-      return [{ id: row.id, body: row.body, created_at: row.created_at, userId: typeof row.user_id === "string" ? row.user_id : author && typeof author.id === "string" ? author.id : null, nickname: author && typeof author.nickname === "string" ? author.nickname : "Member" }];
+      return [{ id: row.id, body: row.body, created_at: row.created_at, nickname: author && typeof author.nickname === "string" ? author.nickname : "Member" }];
     });
     setComments(normalized);
     setCommentCount(normalized.length);
@@ -1042,10 +1033,7 @@ function Engagement({ targetType, targetId, profileId, setError, onOpenProfile }
     else { setCommentText(""); await loadComments(); }
   };
 
-  return <><footer className="post-actions"><button className={`post-action ${liked ? "reacted" : ""}`} aria-label={liked ? "Batalkan apresiasi" : "Beri apresiasi"} onClick={() => void toggleLike()}><Sparkles size={16} /><span>Apresiasi {likes ? likes : ""}</span></button><button className="post-action" aria-expanded={commentsOpen} onClick={() => { const next = !commentsOpen; setCommentsOpen(next); if (next) void loadComments(); }}><MessageCircle size={16} /><span>Diskusi {commentCount ? commentCount : ""}</span></button></footer>{commentsOpen && <section className="comments-panel"><div className="comments-list">{comments.map((comment) => {
-    const userId = comment.userId;
-    return <div className="comment-row" key={comment.id}><strong>{userId ? <ProfileNameButton nickname={comment.nickname} onClick={() => onOpenProfile(userId)} /> : comment.nickname}</strong><span>{comment.body}</span><time>{new Date(comment.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</time></div>;
-  })}{!comments.length && <span className="comments-empty">Belum ada diskusi. Mulai percakapan yang baik.</span>}</div><form className="comment-form" onSubmit={addComment}><input value={commentText} onChange={(event) => setCommentText(event.target.value)} placeholder="Tulis komentar..." maxLength={1000} /><button className="icon-button" disabled={!commentText.trim()} aria-label="Kirim komentar"><Send size={15} /></button></form></section>}</>;
+  return <><footer className="post-actions"><button className={`post-action ${liked ? "reacted" : ""}`} aria-label={liked ? "Batalkan apresiasi" : "Beri apresiasi"} onClick={() => void toggleLike()}><Sparkles size={16} /><span>Apresiasi {likes ? likes : ""}</span></button><button className="post-action" aria-expanded={commentsOpen} onClick={() => { const next = !commentsOpen; setCommentsOpen(next); if (next) void loadComments(); }}><MessageCircle size={16} /><span>Diskusi {commentCount ? commentCount : ""}</span></button></footer>{commentsOpen && <section className="comments-panel"><div className="comments-list">{comments.map((comment) => <div className="comment-row" key={comment.id}><strong>{comment.nickname}</strong><span>{comment.body}</span><time>{new Date(comment.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</time></div>)}{!comments.length && <span className="comments-empty">Belum ada diskusi. Mulai percakapan yang baik.</span>}</div><form className="comment-form" onSubmit={addComment}><input value={commentText} onChange={(event) => setCommentText(event.target.value)} placeholder="Tulis komentar..." maxLength={1000} /><button className="icon-button" disabled={!commentText.trim()} aria-label="Kirim komentar"><Send size={15} /></button></form></section>}</>;
 }
 
 function YouTubePlayer({ videoId, title }: { videoId: string; title: string }) {
@@ -1066,12 +1054,6 @@ function PageHeading({ eyebrow, title, subtitle, action }: { eyebrow: string; ti
 }
 function RoleBadge({ role }: { role: Role }) {
   return <span className={`role-badge ${role}`}><i />{role.toUpperCase()}</span>;
-}
-function ProfileAvatarButton({ profile, onOpen, large = false }: { profile: { nickname: string; avatar_url?: string | null }; onOpen: () => void; large?: boolean }) {
-  return <button className="profile-avatar-button" type="button" onClick={onOpen} aria-label={`Buka profil ${profile.nickname}`} title={`Profil ${profile.nickname}`}><Avatar profile={profile} large={large} /></button>;
-}
-function ProfileNameButton({ nickname, onClick }: { nickname: string; onClick: () => void }) {
-  return <button className="profile-name-button" type="button" onClick={onClick}>{nickname}</button>;
 }
 function Avatar({ profile, large = false }: { profile: { nickname: string; avatar_url?: string | null }; large?: boolean }) {
   return <span className={`avatar ${large ? "avatar-large" : ""}`}>{profile.avatar_url ? <img src={profile.avatar_url} alt="" /> : profile.nickname.slice(0, 1).toUpperCase()}</span>;

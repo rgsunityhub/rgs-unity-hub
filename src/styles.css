@@ -194,14 +194,14 @@ a { color: inherit; }
 .post-card { padding: 16px 18px 0; border: 1px solid #292a30; border-radius: 8px; background: #111216; transition: border-color .18s; }
 .post-card:hover { border-color: #3b3c43; }
 .post-header { display: flex; align-items: center; gap: 10px; }
-.profile-avatar-button { display: inline-flex; flex: 0 0 auto; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }
-.profile-avatar-button:focus-visible, .profile-name-button:focus-visible { outline: 2px solid #d5c78f; outline-offset: 3px; }
-.profile-name-button { display: inline; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; font-weight: inherit; text-align: inherit; cursor: pointer; }
-.profile-name-button:hover { color: #fff; text-decoration: underline; text-underline-offset: 2px; }
 .post-author { flex: 1; min-width: 0; }
 .post-author > strong { display: flex; align-items: center; gap: 7px; font-size: 11px; }
-.post-author .profile-name-button { font-weight: 700; }
 .post-author > span { display: block; color: #777881; font-size: 9px; margin-top: 4px; }
+.member-link-avatar { padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }
+.member-link-avatar:focus-visible { outline: 2px solid #dfe0e5; outline-offset: 3px; }
+.member-link { padding: 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; text-align: left; }
+.member-link:hover { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
+.member-link:focus-visible { outline: 2px solid #dfe0e5; outline-offset: 3px; }
 .post-menu-wrap { position: relative; align-self: flex-start; }
 .post-more { align-self: flex-start; }
 .post-menu { position: absolute; z-index: 3; top: 34px; right: 0; min-width: 158px; padding: 4px; border: 1px solid #303138; border-radius: 6px; background: #17181d; box-shadow: 0 10px 24px #0008; }
@@ -279,7 +279,6 @@ a { color: inherit; }
 .online-badge { color: #777881; display: inline-flex; align-items: center; gap: 5px; font-size: 7px; letter-spacing: .8px; }
 .online-badge i { width: 5px; height: 5px; background: #83d991; border-radius: 50%; }
 .member-card h3 { margin: 13px 0 7px; font-size: 13px; }
-.member-card h3 .profile-name-button { font-size: inherit; font-weight: inherit; }
 .member-card-meta { display: flex; flex-direction: column; gap: 4px; border-top: 1px solid #27282e; padding-top: 11px; margin-top: 14px; }
 .member-card-meta span { color: #777881; font-size: 8px; }
 .member-card-meta strong { color: #bdbec5; font-size: 9px; font-weight: 500; }
