@@ -651,27 +651,27 @@ a { color: inherit; }
     left: 14px;
     bottom: 14px;
     z-index: 6;
-    width: 248px;
+    width: 280px;
     flex: 0 0 auto;
     margin: 0;
   }
   .community-card {
-    min-height: 68px;
+    min-height: 86px;
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 12px 14px;
+    padding: 16px 18px;
   }
   .community-notification-button {
-    width: 36px;
-    height: 36px;
-    flex-basis: 36px;
+    width: 42px;
+    height: 42px;
+    flex-basis: 42px;
   }
   .community-card strong {
-    font-size: 12px;
+    font-size: 14px;
   }
   .community-card span {
-    font-size: 8px;
+    font-size: 9px;
   }
   .sidebar-user {
     display: none;
