@@ -672,11 +672,10 @@ function StoragePage({ profile, onOpenProfile, setError }: { profile: Profile; o
     event.preventDefault();
     const form = event.currentTarget;
     const input = form.elements.namedItem("upload") as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file || !supabase) return;
-    if (file.size > 25 * 1024 * 1024) { setError("Ukuran file maksimal 25 MB."); return; }
-    const allowedTypes = ["image/png", "image/jpeg", "image/gif", "image/webp", "video/mp4", "video/webm", "application/pdf", "text/plain", "application/zip"];
-    if (!allowedTypes.includes(file.type)) { setError("Tipe file tidak didukung. Gunakan gambar, MP4/WebM, PDF, TXT, atau ZIP."); return; }
+    const selectedFiles = Array.from(input.files ?? []);
+    if (!selectedFiles.length || !supabase) return;
+    const oversizedFile = selectedFiles.find((file) => file.size > 25 * 1024 * 1024);
+    if (oversizedFile) { setError(`Ukuran ${oversizedFile.name} melebihi batas 25 MB.`); return; }
     const selectedVisibility = new FormData(form).get("visibility");
     if (selectedVisibility !== "public" && selectedVisibility !== "private") {
       setError("Pilih visibilitas file Public atau Private.");
@@ -684,14 +683,26 @@ function StoragePage({ profile, onOpenProfile, setError }: { profile: Profile; o
     }
     const visibility = selectedVisibility;
     setBusy(true);
-    const storagePath = `${profile.id}/${crypto.randomUUID()}-${file.name.replace(/[^\w.-]/g, "_")}`;
-    const { error: uploadError } = await supabase.storage.from("member-files").upload(storagePath, file, { upsert: false });
-    if (uploadError) { setError(uploadError.message); setBusy(false); return; }
-    const { error: insertError } = await supabase.from("files").insert({ owner_id: profile.id, name: file.name, size_bytes: file.size, mime_type: file.type || "application/octet-stream", visibility, storage_path: storagePath });
-    if (insertError) {
-      const { error: cleanupError } = await supabase.storage.from("member-files").remove([storagePath]);
-      setError(cleanupError ? `${insertError.message}; file sementara tidak berhasil dibersihkan.` : insertError.message);
-    } else { await load(); form.reset(); }
+    let uploadedCount = 0;
+    for (const file of selectedFiles) {
+      const storagePath = `${profile.id}/${crypto.randomUUID()}-${file.name.replace(/[^\w.-]/g, "_")}`;
+      const { error: uploadError } = await supabase.storage.from("member-files").upload(storagePath, file, { upsert: false });
+      if (uploadError) {
+        setError(`Gagal mengunggah ${file.name}: ${uploadError.message}`);
+        break;
+      }
+      const { error: insertError } = await supabase.from("files").insert({ owner_id: profile.id, name: file.name, size_bytes: file.size, mime_type: file.type || "application/octet-stream", visibility, storage_path: storagePath });
+      if (insertError) {
+        const { error: cleanupError } = await supabase.storage.from("member-files").remove([storagePath]);
+        setError(cleanupError ? `${insertError.message}; file ${file.name} sementara tidak berhasil dibersihkan.` : insertError.message);
+        break;
+      }
+      uploadedCount += 1;
+    }
+    if (uploadedCount) {
+      await load();
+      if (uploadedCount === selectedFiles.length) form.reset();
+    }
     setBusy(false);
   };
   const download = async (path: string) => {
@@ -724,7 +735,7 @@ function StoragePage({ profile, onOpenProfile, setError }: { profile: Profile; o
   return <>
     <PageHeading eyebrow="YOUR CLOUD SPACE" title={<>Storage<span className="title-dot">.</span></>} subtitle="Simpan, atur, dan bagikan file komunitas dengan aman." />
     <div className="storage-summary"><div className="storage-summary-icon"><Folder size={21} /></div><div><span>Storage pribadi</span><strong>{formatBytes(used)} <small>digunakan</small></strong></div><div className="storage-progress"><i style={{ width: `${Math.min(used / (1024 * 1024 * 1024) * 100, 100)}%` }} /></div><small>Batas upload per file: 25 MB</small></div>
-    <form className="upload-panel" onSubmit={upload}><div className="upload-icon"><Upload size={19} /></div><div className="upload-copy"><strong>Upload file baru</strong><span>Public dapat dilihat dan diunduh anggota; Private hanya terlihat oleh kamu.</span></div><select className="filter-select" name="visibility" defaultValue="private" disabled={busy}><option value="private">Private</option><option value="public">Public</option></select><label className="button button-primary upload-button"><Upload size={16} />{busy ? "Mengunggah..." : "Pilih file"}<input name="upload" type="file" accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm,application/pdf,text/plain,application/zip" required disabled={busy} /></label><button className="button button-outline" disabled={busy}>Upload</button></form>
+    <form className="upload-panel" onSubmit={upload}><div className="upload-icon"><Upload size={19} /></div><div className="upload-copy"><strong>Upload file baru</strong><span>Public dapat dilihat dan diunduh anggota; Private hanya terlihat oleh kamu.</span></div><select className="filter-select" name="visibility" defaultValue="private" disabled={busy}><option value="private">Private</option><option value="public">Public</option></select><label className="button button-primary upload-button"><Upload size={16} />{busy ? "Mengunggah..." : "Pilih file"}<input name="upload" type="file" multiple required disabled={busy} /></label><button className="button button-outline" disabled={busy}>Upload</button></form>
     <div className="members-toolbar storage-toolbar"><label className="search-box"><Search size={16} /><input placeholder="Cari file..." value={query} onChange={(event) => setQuery(event.target.value)} /></label><span className="member-count">{files.length} file</span></div>
     <div className="file-list">{filtered.map((file) => <div className="storage-file-entry" key={file.id}><div className="file-row"><StorageFilePreview file={file} onOpen={() => setPreviewFile(file)} /><div className="file-row-name"><button className="file-preview-name" type="button" onClick={() => setPreviewFile(file)}>{file.name}</button><span>{formatBytes(file.size_bytes)} · {dateLabel(file.created_at)}</span></div><button className={`visibility-chip ${file.visibility} visibility-toggle`} disabled={visibilityBusyId === file.id} onClick={() => void toggleVisibility(file)} title={`Ubah menjadi ${file.visibility === "public" ? "Private" : "Public"}`} aria-label={`${file.name}: ${file.visibility}. Ubah menjadi ${file.visibility === "public" ? "Private" : "Public"}`}>{file.visibility === "public" ? <Globe2 size={13} /> : <LockKeyhole size={13} />}{visibilityBusyId === file.id ? "Menyimpan..." : file.visibility}</button><div className="file-actions"><button className="icon-button" title="Unduh" onClick={() => void download(file.storage_path)}><ArrowDownToLine size={17} /></button><button className="icon-button" title="Hapus" onClick={() => void remove(file)}><X size={17} /></button></div></div><Engagement targetType="file" targetId={file.id} profileId={profile.id} setError={setError} /></div>)}</div>
     {!filtered.length && <EmptyState title="Belum ada file" body="Upload file pertamamu untuk mulai menggunakan storage." />}
