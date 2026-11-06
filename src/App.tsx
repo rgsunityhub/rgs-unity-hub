@@ -291,10 +291,11 @@ function HubLayout({ profile, selectedPage, navItems: items, onNavigate, onSignO
         <div className="workspace-label">WORKSPACE</div>
         <nav className="side-nav">{items.map(({ id, label, icon: Icon }) => <button key={id} className={selectedPage === id ? "nav-link selected" : "nav-link"} onClick={() => { onNavigate(id); setMenuOpen(false); }}><Icon size={18} /><span>{label}</span>{id === "notifications" && unreadCount > 0 && <span className="nav-indicator">{unreadCount > 99 ? "99+" : unreadCount}</span>}</button>)}</nav>
         <div className="sidebar-bottom">
-          <div className="community-card"><div className="community-mark"><Sparkles size={16} /></div><strong>RGS Community</strong><span>UNITY • GAMING • COMMUNITY</span></div>
+          <div className="community-card desktop-community-card"><div className="community-mark"><Sparkles size={16} /></div><strong>RGS Community</strong><span>UNITY • GAMING • COMMUNITY</span></div>
         </div>
         <div className="sidebar-user"><Avatar profile={profile} /><div className="user-meta"><strong>{profile.nickname}</strong><span><RoleBadge role={profile.role} /></span></div><button className="icon-button" onClick={onSignOut} title="Keluar"><LogOut size={17} /></button></div>
       </aside>
+      <div className="mobile-community-card"><div className="community-card"><div className="community-mark"><Sparkles size={16} /></div><strong>RGS Community</strong><span>UNITY • GAMING • COMMUNITY</span></div></div>
       <div className="main-column">
         <header className="topbar"><button className="mobile-menu icon-button" onClick={() => setMenuOpen(true)} aria-label="Buka menu"><Menu size={20} /></button><div className="breadcrumb">RGS HUB <span>/</span> <strong>{pageTitle}</strong></div><div className="topbar-actions"><div className="online-indicator">RGS COMMUNITY</div><button className="icon-button notification-button" onClick={() => onNavigate("notifications")} aria-label={unreadCount ? `Notifikasi, ${unreadCount} belum dibaca` : "Notifikasi"} title={unreadCount ? `${unreadCount} notifikasi belum dibaca` : "Notifikasi"}><Bell size={18} />{unreadCount > 0 && <i />}</button><button className="top-avatar" onClick={() => onNavigate("profile")} aria-label={`Buka profil ${profile.nickname}`} title={profile.nickname}><Avatar profile={profile} /></button><button className="icon-button mobile-logout-button" onClick={onSignOut} aria-label="Keluar" title="Keluar"><LogOut size={17} /></button></div></header>
         <main className="page-container">{children}</main>

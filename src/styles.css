@@ -90,6 +90,7 @@ a { color: inherit; }
 .nav-link.selected svg { color: #dddde2; }
 .nav-indicator { min-width: 16px; height: 16px; display: grid; place-items: center; padding: 0 4px; border-radius: 9px; background: #d0d0d6; color: #141519; font-size: 8px; line-height: 1; font-weight: 700; margin-left: auto; }
 .sidebar-bottom { margin-top: auto; }
+.mobile-community-card { display: none; }
 .community-card { border: 1px solid #282930; border-radius: 8px; background: linear-gradient(135deg, #17181d, #111216); padding: 12px; margin-bottom: 15px; position: relative; overflow: hidden; }
 .community-card::after { content: ""; position: absolute; right: -14px; top: -20px; width: 85px; aspect-ratio: 1; background: url("/rgs-logo.png") center/contain no-repeat; opacity: .08; filter: grayscale(1); }
 .community-mark { width: 26px; height: 26px; display: grid; place-items: center; border: 1px solid #3b3c43; border-radius: 6px; margin-bottom: 10px; color: #dddde1; }
@@ -743,6 +744,17 @@ a { color: inherit; }
     display: block;
     width: 168px;
     margin: 0;
+  }
+  .sidebar-bottom {
+    display: none !important;
+  }
+  .mobile-community-card {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 9;
+    width: 168px;
+    display: block;
   }
   .community-card {
     display: block;
