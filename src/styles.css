@@ -94,6 +94,10 @@ a { color: inherit; }
 .community-card { border: 1px solid #282930; border-radius: 8px; background: linear-gradient(135deg, #17181d, #111216); padding: 12px; margin-bottom: 15px; position: relative; overflow: hidden; display: flex; align-items: center; gap: 10px; }
 .community-card::after { content: ""; position: absolute; right: -14px; top: -20px; width: clamp(70px, 5vw, 85px); aspect-ratio: 1; background: url("/rgs-logo.png") center/contain no-repeat; opacity: .08; filter: grayscale(1); }
 .community-notification-button { position: relative; width: 32px; height: 32px; flex: 0 0 32px; display: grid; place-items: center; border: 1px solid #3b3c43; border-radius: 6px; color: #dddde1; background: rgba(255,255,255,.025); }
+.desktop-community-card .community-notification-button,
+.mobile-community-card .community-notification-button {
+  display: none;
+}
 .community-notification-button:hover { border-color: #696a72; background: #222329; color: #fff; }
 .community-notification-button > i { position: absolute; width: 5px; height: 5px; right: 3px; top: 3px; border-radius: 50%; background: #f1f1f3; }
 .community-copy { min-width: 0; }
