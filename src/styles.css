@@ -176,7 +176,7 @@ a { color: inherit; }
 .image-lightbox-caption strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .image-lightbox-caption span { flex: 0 0 auto; color: #92939b; }
 .image-lightbox-caption .icon-button { margin-left: auto; }
-.file-preview-modal { width: clamp(320px, 96vw, 1200px); height: clamp(480px, 92vh, 900px); }
+.file-preview-modal { width: min(96vw, 1200px); height: min(92vh, 900px); }
 .file-preview-content { display: grid; flex: 1; min-height: 0; width: 100%; place-items: center; overflow: hidden; border-radius: 5px; background: #08090c; }
 .file-preview-content .loading-line { grid-area: 1 / 1; }
 .file-preview-content .image-lightbox-image { max-width: 100%; max-height: 100%; }
@@ -613,13 +613,20 @@ a { color: inherit; }
   .notification-row .text-button { align-self: center; }
 }
 @media (max-width: 600px) {
-  .public-feed-file { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; grid-template-areas: "preview details details" "preview visibility download"; column-gap: 10px; row-gap: 8px; align-items: center; }
+  .file-row { gap: clamp(7px, 2vw, 11px); min-width: 0; }
+  .file-row-name { min-width: 0; overflow: hidden; }
+  .file-row-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .storage-file-preview { width: clamp(42px, 12vw, 48px); height: clamp(42px, 12vw, 48px); flex-basis: clamp(42px, 12vw, 48px); }
+  .public-feed-file { display: grid; grid-template-columns: clamp(78px, 21vw, 112px) minmax(0, 1fr) auto; grid-template-areas: "preview details details" "preview visibility download"; column-gap: 10px; row-gap: 8px; align-items: center; }
   .public-feed-file .public-file-preview { grid-area: preview; }
   .public-feed-file.image .public-file-preview, .public-feed-file.video .public-file-preview { width: clamp(78px, 21vw, 112px); height: clamp(58px, 16vw, 84px); max-width: none; max-height: none; flex-basis: clamp(78px, 21vw, 112px); }
   .public-feed-file.image .public-file-preview img, .public-feed-file.video .public-file-preview video { max-width: none; max-height: none; }
   .public-feed-file .file-row-name { grid-area: details; width: 100%; }
   .public-feed-file > .visibility-chip { grid-area: visibility; display: inline-flex; justify-self: start; }
   .public-feed-file > .icon-button { grid-area: download; justify-self: end; }
+  .public-feed-file .file-row-name { min-width: 0; overflow: hidden; }
+  .file-preview-name { width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .public-feed-file .file-row-name > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 @media (max-width: 440px) {
   .auth-brand img { width: 41px; height: 41px; }
@@ -650,7 +657,7 @@ a { color: inherit; }
   .image-lightbox-backdrop { padding: 10px; }
   .image-lightbox { max-width: 100%; padding: 8px; }
   .image-lightbox-image { max-width: calc(100vw - 36px); max-height: calc(82vh - 44px); }
-  .file-preview-modal { width: 100%; height: min(88vh, 760px); }
+  .file-preview-modal { width: calc(100vw - 20px); height: min(88vh, 760px); }
   .file-preview-content { min-height: 0; }
   .file-preview-message { padding: 20px; }
   .image-lightbox-close { top: 12px; right: 12px; }
