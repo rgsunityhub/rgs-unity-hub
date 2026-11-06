@@ -6,6 +6,7 @@ import {
   Trash2, Users, Volume2, VolumeX, X, Youtube, type LucideIcon,
 } from "lucide-react";
 import { isSupabaseConfigured, supabase } from "./lib/supabase";
+import InstallAppButton from "./components/InstallAppButton";
 import type { Page, Profile, Publication, Role } from "./lib/types";
 
 type NavItem = { id: Page; label: string; icon: LucideIcon; roles?: Role[] };
@@ -214,7 +215,7 @@ function AuthPage({ configured, onAuthenticated }: { configured: boolean; onAuth
   return (
     <main className="auth-page">
       <div className="auth-backdrop" />
-      <header className="auth-brand"><img src="/rgs-logo.png" alt="Logo RGS Unity Hub" /><div><strong>RGS <span>UNITY HUB</span></strong><small>REVOLUSI GAMING SPORT</small></div></header>
+      <header className="auth-brand"><div className="auth-brand-identity"><img src="/rgs-logo.png" alt="Logo RGS Unity Hub" /><div><strong>RGS <span>UNITY HUB</span></strong><small>REVOLUSI GAMING SPORT</small></div></div><InstallAppButton /></header>
       <section className="auth-content">
         <div className="auth-copy">
           <div className="eyebrow"><span className="pulse-dot" /> THE COMMUNITY HUB</div>
@@ -297,7 +298,7 @@ function HubLayout({ profile, selectedPage, navItems: items, onNavigate, onSignO
       </aside>
       <div className="mobile-community-card"><div className="community-card"><button className="community-notification-button" onClick={() => onNavigate("notifications")} aria-label="Buka notifikasi"><Bell size={16} />{unreadCount > 0 && <i />}</button><div className="community-copy"><strong>RGS Community</strong><span>UNITY • GAMING • COMMUNITY</span></div></div></div>
       <div className="main-column">
-        <header className="topbar"><button className="mobile-menu icon-button" onClick={() => setMenuOpen(true)} aria-label="Buka menu"><Menu size={20} /></button><div className="breadcrumb">RGS HUB <span>/</span> <strong>{pageTitle}</strong></div><div className="topbar-actions"><button className="icon-button notification-button" onClick={() => onNavigate("notifications")} aria-label={unreadCount ? `Notifikasi, ${unreadCount} belum dibaca` : "Notifikasi"} title="Notifikasi"><Bell size={18} />{unreadCount > 0 && <i />}</button><button className="top-avatar" onClick={() => onNavigate("profile")} aria-label={`Buka profil ${profile.nickname}`} title={profile.nickname}><Avatar profile={profile} /></button><div className="topbar-user-meta"><strong>{profile.nickname}</strong><span><RoleBadge role={profile.role} /></span></div><button className="icon-button mobile-logout-button" onClick={onSignOut} aria-label="Keluar" title="Keluar"><LogOut size={17} /></button></div></header>
+        <header className="topbar"><button className="mobile-menu icon-button" onClick={() => setMenuOpen(true)} aria-label="Buka menu"><Menu size={20} /></button><div className="breadcrumb">RGS HUB <span>/</span> <strong>{pageTitle}</strong></div><div className="topbar-actions"><InstallAppButton /><button className="icon-button notification-button" onClick={() => onNavigate("notifications")} aria-label={unreadCount ? `Notifikasi, ${unreadCount} belum dibaca` : "Notifikasi"} title="Notifikasi"><Bell size={18} />{unreadCount > 0 && <i />}</button><button className="top-avatar" onClick={() => onNavigate("profile")} aria-label={`Buka profil ${profile.nickname}`} title={profile.nickname}><Avatar profile={profile} /></button><div className="topbar-user-meta"><strong>{profile.nickname}</strong><span><RoleBadge role={profile.role} /></span></div><button className="icon-button mobile-logout-button" onClick={onSignOut} aria-label="Keluar" title="Keluar"><LogOut size={17} /></button></div></header>
         <main className="page-container">{children}</main>
       </div>
       {menuOpen && <button className="mobile-overlay" onClick={() => setMenuOpen(false)} aria-label="Tutup navigasi" />}

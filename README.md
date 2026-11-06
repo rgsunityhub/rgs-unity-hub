@@ -150,6 +150,10 @@ File di bucket tetap privat kecuali metadata file menyatakan `public`; owner jug
 
 Deployment production: [https://rgs-unity-hub.vercel.app](https://rgs-unity-hub.vercel.app). Repository GitHub publik [rgsunityhub/rgsunityhub.github.io](https://github.com/rgsunityhub/rgsunityhub.github.io) terhubung ke project Vercel `rgs-unity-hub`; Vercel GitHub App hanya diberi akses ke repository tersebut. Setiap push ke branch `main` memicu build dan deployment production otomatis. `.env.local` tidak ikut commit (`.gitignore` mengecualikannya).
 
+## Instal sebagai aplikasi (PWA)
+
+RGS Unity Hub dapat dipasang dari browser sebagai aplikasi di Android, iPhone/iPad, dan desktop. Buka URL production melalui HTTPS, lalu pilih **Pasang aplikasi** jika tombol pemasangan tersedia. Jika tidak ada prompt otomatis, gunakan menu browser: di Android/desktop pilih **Instal aplikasi** atau **Tambahkan ke layar utama**; di iPhone/iPad Safari pilih **Bagikan → Tambahkan ke Layar Utama**. Pastikan ikon aplikasi muncul di layar utama setelah pemasangan. Fitur offline menyimpan shell aplikasi; login, data komunitas, dan file memerlukan koneksi internet.
+
 ## Deploy ke GitHub Pages
 
 Workflow `.github/workflows/deploy-pages.yml` membangun dan menerbitkan aplikasi ke `https://rgsunityhub.github.io/` saat perubahan di-push ke branch `main`. Repository harus bernama `rgsunityhub.github.io` untuk menggunakan domain utama akun GitHub Pages. Build Vercel tetap memakai base path `/`.

@@ -26,6 +26,8 @@ a { color: inherit; }
 .auth-page { min-height: 100vh; padding: 27px clamp(22px, 6vw, 90px) 25px; display: flex; flex-direction: column; position: relative; overflow: hidden; background: radial-gradient(ellipse at 18% 56%, rgba(107, 108, 121, .14), transparent 42%), linear-gradient(115deg, #090a0c 10%, #0c0d10 60%, #090a0c); }
 .auth-backdrop { position: absolute; width: min(700px, 65vw); aspect-ratio: 1; background: url("/rgs-logo.png") center/contain no-repeat; opacity: .035; filter: grayscale(1); left: -180px; top: 50%; transform: translateY(-45%); pointer-events: none; }
 .auth-brand, .sidebar-brand { display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; }
+.auth-brand { justify-content: space-between; }
+.auth-brand-identity { display: flex; align-items: center; gap: 12px; }
 .auth-brand img { width: 49px; height: 49px; object-fit: cover; border-radius: 50%; border: 1px solid #44454a; }
 .auth-brand strong, .sidebar-brand strong { display: block; font-family: "Barlow Condensed", sans-serif; font-size: 19px; letter-spacing: 1.6px; font-weight: 700; }
 .auth-brand strong span, .sidebar-brand strong span { color: #c6c7ce; }
@@ -63,6 +65,9 @@ a { color: inherit; }
 .button-primary:hover { background: #fff; }
 .button-outline { border: 1px solid #37383f; color: #d4d4d9; background: #15161a; }
 .button-outline:hover { border-color: #6a6b72; background: #1b1c20; }
+.install-app { position: relative; flex: 0 0 auto; }
+.install-app-button { min-height: 34px; padding: 0 10px; white-space: nowrap; }
+.install-app-help { position: absolute; z-index: 10; top: calc(100% + 8px); right: 0; width: min(270px, 80vw); margin: 0; padding: 10px 12px; border: 1px solid #37383f; border-radius: 7px; background: #15161a; color: #d4d4d9; font-size: 10px; line-height: 1.6; box-shadow: 0 12px 30px rgba(0,0,0,.35); }
 .auth-submit { width: 100%; justify-content: space-between; padding: 0 14px; height: 42px; margin-top: 2px; }
 .form-message { padding: 10px 11px; border-radius: 6px; margin-bottom: 12px; font-size: 11px; line-height: 1.5; }
 .form-message.danger { background: rgba(168, 52, 52, .12); color: #f39d9d; border: 1px solid rgba(200, 80, 80, .25); }
@@ -566,6 +571,8 @@ a { color: inherit; }
   }
 }
 @media (max-width: 760px) {
+  .topbar .install-app-button { width: 34px; padding: 0; }
+  .topbar .install-app-button span { display: none; }
   .auth-page { padding: 19px 20px 20px; }
   .auth-content { display: flex; flex-direction: column; align-items: stretch; gap: 28px; padding: 52px 0 40px; }
   .auth-copy { max-width: 500px; }
