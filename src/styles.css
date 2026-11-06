@@ -625,16 +625,7 @@ a { color: inherit; }
     display: block;
   }
   .sidebar-user {
-    position: fixed;
-    top: 15px;
-    right: 46px;
-    z-index: 8;
-    width: 174px;
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    padding: 0;
-    border-top: 0;
+    display: none;
   }
   .nav-link {
     width: auto;
@@ -655,7 +646,28 @@ a { color: inherit; }
     padding-top: 62px;
   }
   .topbar {
+    position: fixed;
+    top: 0;
+    right: 46px;
+    z-index: 8;
+    width: 150px;
+    height: 62px;
+    display: flex;
+    border-bottom: 0;
+    background: transparent;
+    backdrop-filter: none;
+    padding: 0;
+  }
+  .topbar .breadcrumb,
+  .topbar .online-indicator {
     display: none;
+  }
+  .topbar-actions {
+    width: 150px;
+    justify-content: flex-end;
+  }
+  .topbar .mobile-logout-button {
+    display: inline-grid;
   }
 }
 
