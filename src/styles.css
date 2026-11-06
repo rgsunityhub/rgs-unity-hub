@@ -497,7 +497,12 @@ a { color: inherit; }
 }
 @media (min-width: 761px) and (max-width: 1449px) {
   .sidebar-brand {
-    display: none;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 4px 16px;
+    border-bottom: 1px solid #23242a;
   }
   .topbar .top-avatar,
   .topbar .notification-button {
@@ -515,7 +520,7 @@ a { color: inherit; }
     border-top: 0;
   }
   .workspace-label {
-    padding-top: 66px;
+    padding-top: 18px;
   }
 }
 @media (max-width: 760px) {
