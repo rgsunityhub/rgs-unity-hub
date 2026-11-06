@@ -311,7 +311,7 @@ function PageContent({ page, profile, viewedProfileId, onOpenProfile, setProfile
     case "members": return <MembersPage profile={profile} setError={setError} />;
     case "storage": return <StoragePage profile={profile} onOpenProfile={onOpenProfile} setError={setError} />;
     case "youtube": return <YouTubePage profile={profile} onOpenProfile={onOpenProfile} setError={setError} />;
-    case "chat": return <ChatPage profile={profile} setError={setError} />;
+    case "chat": return <ChatPage profile={profile} onOpenProfile={onOpenProfile} setError={setError} />;
     case "profile": return <ProfilePage profile={profile} viewedProfileId={viewedProfileId} setProfile={setProfile} setError={setError} />;
     case "invites": return <InvitesPage profile={profile} setError={setError} />;
     case "notifications": return <NotificationsPage setError={setError} />;
@@ -783,19 +783,19 @@ function YouTubePage({ profile, onOpenProfile, setError }: { profile: Profile; o
   </>;
 }
 
-function ChatPage({ profile, setError }: { profile: Profile; setError: (message: string) => void }) {
-  const [messages, setMessages] = useState<Array<{ id: string; body: string; created_at: string; profiles?: { nickname: string; role: Role } }>>([]);
+function ChatPage({ profile, onOpenProfile, setError }: { profile: Profile; onOpenProfile: (memberId: string) => void; setError: (message: string) => void }) {
+  const [messages, setMessages] = useState<Array<{ id: string; sender_id: string; body: string; created_at: string; profiles?: { nickname: string; avatar_url?: string | null; role: Role } }>>([]);
   const [text, setText] = useState("");
   const load = useCallback(async () => {
     if (!supabase) return;
-    const { data, error } = await supabase.from("chat_messages").select("id, body, created_at, profiles(nickname, role)").eq("room_id", "00000000-0000-0000-0000-000000000001").order("created_at", { ascending: true }).limit(100);
+    const { data, error } = await supabase.from("chat_messages").select("id, sender_id, body, created_at, profiles(nickname, avatar_url, role)").eq("room_id", "00000000-0000-0000-0000-000000000001").order("created_at", { ascending: true }).limit(100);
     if (error) { setError(error.message); return; }
     const normalized = Array.isArray(data) ? data.flatMap((item) => {
       const row = item as unknown as Record<string, unknown>;
       const joined = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
       const author = joined && typeof joined === "object" ? joined as Record<string, unknown> : null;
-      if (typeof row.id !== "string" || typeof row.body !== "string" || typeof row.created_at !== "string") return [];
-      return [{ id: row.id, body: row.body, created_at: row.created_at, profiles: author && typeof author.nickname === "string" && isRole(author.role) ? { nickname: author.nickname, role: author.role } : undefined }];
+      if (typeof row.id !== "string" || typeof row.sender_id !== "string" || typeof row.body !== "string" || typeof row.created_at !== "string") return [];
+      return [{ id: row.id, sender_id: row.sender_id, body: row.body, created_at: row.created_at, profiles: author && typeof author.nickname === "string" && isRole(author.role) ? { nickname: author.nickname, avatar_url: typeof author.avatar_url === "string" ? author.avatar_url : null, role: author.role } : undefined }];
     }) : [];
     setMessages(normalized);
   }, [setError]);
@@ -813,7 +813,7 @@ function ChatPage({ profile, setError }: { profile: Profile; setError: (message:
   };
   return <>
     <PageHeading eyebrow="SAY HELLO" title={<>Community chat<span className="title-dot">.</span></>} subtitle="Ruang obrolan umum RGS, live bersama komunitas." />
-    <section className="chat-panel"><div className="chat-header"><div className="chat-room-icon"><MessageCircle size={18} /></div><div><strong># general</strong><span><i /> Ruang publik · {messages.length} pesan dimuat</span></div><button className="icon-button" title="Info"><MoreHorizontal size={19} /></button></div><div className="chat-messages">{messages.map((message) => <article className={`chat-message ${message.profiles?.nickname === profile.nickname ? "mine" : ""}`} key={message.id}><div className="chat-avatar">{(message.profiles?.nickname ?? "?").slice(0, 1).toUpperCase()}</div><div className="chat-message-content"><div><strong>{message.profiles?.nickname ?? "Member"} </strong>{message.profiles?.role && <RoleBadge role={message.profiles.role} />}<time>{new Date(message.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</time></div><p>{message.body}</p></div></article>)}</div><form className="chat-composer" onSubmit={send}><input value={text} onChange={(event) => setText(event.target.value)} placeholder="Kirim pesan ke #general..." maxLength={2000} /><button className="send-button" disabled={!text.trim()} aria-label="Kirim pesan"><Send size={17} /></button></form></section>
+    <section className="chat-panel"><div className="chat-header"><div className="chat-room-icon"><MessageCircle size={18} /></div><div><strong># general</strong><span><i /> Ruang publik · {messages.length} pesan dimuat</span></div><button className="icon-button" title="Info"><MoreHorizontal size={19} /></button></div><div className="chat-messages">{messages.map((message) => <article className={`chat-message ${message.profiles?.nickname === profile.nickname ? "mine" : ""}`} key={message.id}><button className="chat-profile-button" type="button" onClick={() => onOpenProfile(message.sender_id)} aria-label={`Lihat profil ${message.profiles?.nickname ?? "Member"}`}><Avatar profile={{ nickname: message.profiles?.nickname ?? "Member", avatar_url: message.profiles?.avatar_url ?? null }} /></button><div className="chat-message-content"><div><button className="chat-member-name" type="button" onClick={() => onOpenProfile(message.sender_id)}>{message.profiles?.nickname ?? "Member"}</button>{message.profiles?.role && <RoleBadge role={message.profiles.role} />}<time>{new Date(message.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</time></div><p>{message.body}</p></div></article>)}</div><form className="chat-composer" onSubmit={send}><input value={text} onChange={(event) => setText(event.target.value)} placeholder="Kirim pesan ke #general..." maxLength={2000} /><button className="send-button" disabled={!text.trim()} aria-label="Kirim pesan"><Send size={17} /></button></form></section>
     <p className="chat-notice"><Shield size={14} /> Jaga ruang tetap nyaman. Jangan kirim password, data pribadi, atau informasi sensitif.</p>
   </>;
 }
