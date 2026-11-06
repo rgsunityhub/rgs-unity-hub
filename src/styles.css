@@ -293,6 +293,10 @@ a { color: inherit; }
 .member-modal h2 { margin: 0 0 8px; font-size: 18px; }
 .member-modal > p { color: #a3a4ab; font-size: 11px; line-height: 1.6; margin: 15px 0 17px; }
 .member-modal .member-card-meta { text-align: left; }
+.member-profile-modal { width: min(400px, calc(100vw - 32px)); padding: 30px 28px 25px; }
+.member-profile-modal .modal-avatar { margin-bottom: 14px; }
+.member-profile-modal .modal-avatar .avatar-large { width: 74px; height: 74px; font-size: 24px; }
+.profile-modal-loading { min-height: 140px; display: grid; place-items: center; }
 .reset-page { justify-content: flex-start; }
 .reset-card { align-self: center; margin: auto; }
 

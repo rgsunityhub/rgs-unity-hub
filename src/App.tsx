@@ -96,6 +96,7 @@ function App() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [page, setPage] = useState<Page>("home");
   const [viewedProfileId, setViewedProfileId] = useState<string | null>(null);
+  const [memberPreviewId, setMemberPreviewId] = useState<string | null>(null);
   const [loading, setLoading] = useState(isSupabaseConfigured);
   const [error, setError] = useState("");
   const [recoveryPending, setRecoveryPending] = useState(window.location.hash.includes("type=recovery"));
@@ -144,14 +145,14 @@ function App() {
     setPage(nextPage);
   };
   const openMemberProfile = (memberId: string) => {
-    setViewedProfileId(memberId);
-    setPage("profile");
+    setMemberPreviewId(memberId);
   };
 
   return (
     <HubLayout profile={profile} selectedPage={selectedPage} navItems={visibleNav} onNavigate={navigate} onSignOut={signOut} setError={setError}>
       {error && <div className="toast error-toast"><CircleHelp size={17} />{error}<button onClick={() => setError("")} aria-label="Tutup"><X size={15} /></button></div>}
       <PageContent page={selectedPage} profile={profile} viewedProfileId={viewedProfileId} onOpenProfile={openMemberProfile} setProfile={setProfile} setError={setError} />
+      {memberPreviewId && <MemberProfileModal memberId={memberPreviewId} onClose={() => setMemberPreviewId(null)} setError={setError} />}
     </HubLayout>
   );
 }
@@ -939,6 +940,44 @@ function SettingsPage() {
     <section className="settings-card"><div className="settings-icon"><Folder size={19} /></div><div><strong>File & upload limits</strong><p>Batas upload antarmuka saat ini 25 MB per file. Batas bucket juga harus diatur di Supabase Dashboard.</p></div><span className="status-chip active">25 MB / file</span></section>
     <section className="settings-card"><div className="settings-icon"><CircleHelp size={19} /></div><div><strong>Owner provisioning</strong><p>Akun owner pertama hanya dapat dipromosikan menggunakan SQL Editor service role sesuai panduan README.</p></div><span className="status-chip inactive">Manual</span></section>
   </>;
+}
+
+function MemberProfileModal({ memberId, onClose, setError }: { memberId: string; onClose: () => void; setError: (message: string) => void }) {
+  const [member, setMember] = useState<Profile | null>(null);
+
+  useEffect(() => {
+    if (!supabase) return;
+    let active = true;
+    supabase.from("profiles").select("*").eq("id", memberId).single().then(({ data, error }) => {
+      if (!active) return;
+      if (error) setError(error.message);
+      else setMember(data as Profile);
+    });
+    return () => { active = false; };
+  }, [memberId, setError]);
+
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+
+  if (!member) {
+    return <div className="modal-backdrop" role="presentation" onClick={onClose}><section className="member-modal" role="dialog" aria-modal="true" aria-label="Memuat profil member" onClick={(event) => event.stopPropagation()}><button className="modal-close icon-button" onClick={onClose} aria-label="Tutup"><X size={18} /></button><div className="profile-modal-loading"><LoadingLine /></div></section></div>;
+  }
+
+  return <div className="modal-backdrop" onClick={onClose}>
+    <section className="member-modal member-profile-modal" role="dialog" aria-modal="true" aria-label={`Profil ${member.nickname}`} onClick={(event) => event.stopPropagation()}>
+      <button className="modal-close icon-button" onClick={onClose} aria-label="Tutup"><X size={18} /></button>
+      <div className="modal-avatar"><Avatar profile={member} large /></div>
+      <h2>{member.nickname}</h2>
+      <RoleBadge role={member.role} />
+      <p>{member.bio || "Member komunitas RGS Unity Hub."}</p>
+      <div className="member-card-meta"><span>Bergabung</span><strong>{dateLabel(member.created_at)}</strong></div>
+    </section>
+  </div>;
 }
 
 function PublicationCard({ post, profileId, onOpenProfile, onDelete, setError }: { post: Publication; profileId: string; onOpenProfile: (memberId: string) => void; onDelete: () => void | Promise<void>; setError: (message: string) => void }) {
