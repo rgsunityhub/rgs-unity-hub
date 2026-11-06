@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import {
   ArrowDownToLine, ArrowUpRight, Bell, Check, CircleHelp, Copy, Expand, File, FileArchive, FileImage,
   FileText, Film, Folder, Globe2, Home, KeyRound, LayoutDashboard, Link2, LockKeyhole, LogOut,
-  Menu, MessageCircle, MoreHorizontal, Plus, Search, Send, Settings, Shield, Sparkles, Image as ImageIcon, Upload,
+  Menu, MessageCircle, MoreHorizontal, Plus, RefreshCw, Search, Send, Settings, Shield, Sparkles, Image as ImageIcon, Upload,
   Trash2, Users, Volume2, VolumeX, X, Youtube, type LucideIcon,
 } from "lucide-react";
 import { isSupabaseConfigured, supabase } from "./lib/supabase";
@@ -786,6 +786,7 @@ function YouTubePage({ profile, onOpenProfile, setError }: { profile: Profile; o
 function ChatPage({ profile, onOpenProfile, setError }: { profile: Profile; onOpenProfile: (memberId: string) => void; setError: (message: string) => void }) {
   const [messages, setMessages] = useState<Array<{ id: string; sender_id: string; body: string; created_at: string; profiles?: { nickname: string; avatar_url?: string | null; role: Role } }>>([]);
   const [text, setText] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
   const load = useCallback(async () => {
     if (!supabase) return;
     const { data, error } = await supabase.from("chat_messages").select("id, sender_id, body, created_at, profiles(nickname, avatar_url, role)").eq("room_id", "00000000-0000-0000-0000-000000000001").order("created_at", { ascending: true }).limit(100);
@@ -811,9 +812,17 @@ function ChatPage({ profile, onOpenProfile, setError }: { profile: Profile; onOp
     const { error } = await supabase.from("chat_messages").insert({ room_id: "00000000-0000-0000-0000-000000000001", sender_id: profile.id, body: text.trim() });
     if (error) setError(error.message); else { setText(""); await load(); }
   };
+  const copyRoomLink = async () => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/#chat`);
+      setMenuOpen(false);
+    } catch (error) {
+      setError(friendlyError(error));
+    }
+  };
   return <>
     <PageHeading eyebrow="SAY HELLO" title={<>Community chat<span className="title-dot">.</span></>} subtitle="Ruang obrolan umum RGS, live bersama komunitas." />
-    <section className="chat-panel"><div className="chat-header"><div className="chat-room-icon"><MessageCircle size={18} /></div><div><strong># general</strong><span><i /> Ruang publik · {messages.length} pesan dimuat</span></div><button className="icon-button" title="Info"><MoreHorizontal size={19} /></button></div><div className="chat-messages">{messages.map((message) => <article className={`chat-message ${message.profiles?.nickname === profile.nickname ? "mine" : ""}`} key={message.id}><button className="chat-profile-button" type="button" onClick={() => onOpenProfile(message.sender_id)} aria-label={`Lihat profil ${message.profiles?.nickname ?? "Member"}`}><Avatar profile={{ nickname: message.profiles?.nickname ?? "Member", avatar_url: message.profiles?.avatar_url ?? null }} /></button><div className="chat-message-content"><div><button className="chat-member-name" type="button" onClick={() => onOpenProfile(message.sender_id)}>{message.profiles?.nickname ?? "Member"}</button>{message.profiles?.role && <RoleBadge role={message.profiles.role} />}<time>{new Date(message.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</time></div><p>{message.body}</p></div></article>)}</div><form className="chat-composer" onSubmit={send}><input value={text} onChange={(event) => setText(event.target.value)} placeholder="Kirim pesan ke #general..." maxLength={2000} /><button className="send-button" disabled={!text.trim()} aria-label="Kirim pesan"><Send size={17} /></button></form></section>
+    <section className="chat-panel"><div className="chat-header"><div className="chat-room-icon"><MessageCircle size={18} /></div><div><strong># general</strong><span><i /> Ruang publik · {messages.length} pesan dimuat</span></div><div className="chat-menu-wrap"><button className="icon-button" title="Opsi ruang chat" aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}><MoreHorizontal size={19} /></button>{menuOpen && <div className="chat-menu" role="menu"><button role="menuitem" onClick={() => void copyRoomLink()}><Copy size={14} />Salin tautan ruang</button><button role="menuitem" onClick={() => { void load(); setMenuOpen(false); }}><RefreshCw size={14} />Muat ulang pesan</button></div>}</div></div><div className="chat-messages">{messages.map((message) => <article className={`chat-message ${message.profiles?.nickname === profile.nickname ? "mine" : ""}`} key={message.id}><button className="chat-profile-button" type="button" onClick={() => onOpenProfile(message.sender_id)} aria-label={`Lihat profil ${message.profiles?.nickname ?? "Member"}`}><Avatar profile={{ nickname: message.profiles?.nickname ?? "Member", avatar_url: message.profiles?.avatar_url ?? null }} /></button><div className="chat-message-content"><div><button className="chat-member-name" type="button" onClick={() => onOpenProfile(message.sender_id)}>{message.profiles?.nickname ?? "Member"}</button>{message.profiles?.role && <RoleBadge role={message.profiles.role} />}<time>{new Date(message.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</time></div><p>{message.body}</p></div></article>)}</div><form className="chat-composer" onSubmit={send}><input value={text} onChange={(event) => setText(event.target.value)} placeholder="Kirim pesan ke #general..." maxLength={2000} /><button className="send-button" disabled={!text.trim()} aria-label="Kirim pesan"><Send size={17} /></button></form></section>
     <p className="chat-notice"><Shield size={14} /> Jaga ruang tetap nyaman. Jangan kirim password, data pribadi, atau informasi sensitif.</p>
   </>;
 }

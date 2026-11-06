@@ -392,6 +392,10 @@ a { color: inherit; }
 .chat-message.mine .chat-message-content { text-align: right; }
 .chat-profile-button { flex: 0 0 auto; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }
 .chat-profile-button:focus-visible { outline: 2px solid #dfe0e5; outline-offset: 3px; }
+.chat-menu-wrap { position: relative; margin-left: auto; }
+.chat-menu { position: absolute; top: 38px; right: 0; z-index: 30; width: 190px; padding: 5px; border: 1px solid #303138; border-radius: 9px; background: #18191e; box-shadow: 0 16px 40px rgb(0 0 0 / 45%); }
+.chat-menu button { width: 100%; display: flex; align-items: center; gap: 8px; padding: 9px 10px; border: 0; border-radius: 6px; background: transparent; color: #d9d9df; font: 500 12px "DM Sans", sans-serif; cursor: pointer; text-align: left; }
+.chat-menu button:hover { background: #292a30; color: #fff; }
 .chat-profile-button .avatar { width: 31px; height: 31px; font-size: 10px; }
 .chat-member-name { padding: 0; border: 0; background: transparent; color: inherit; font: inherit; font-weight: 700; cursor: pointer; }
 .chat-member-name:hover { text-decoration: underline; text-underline-offset: 3px; }
