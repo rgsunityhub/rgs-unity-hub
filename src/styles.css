@@ -734,9 +734,11 @@ a { color: inherit; }
     padding-bottom: 68px;
   }
   .sidebar-bottom {
-    position: fixed;
-    top: 12px;
-    left: 12px;
+    position: fixed !important;
+    top: 12px !important;
+    bottom: auto !important;
+    right: auto !important;
+    left: 12px !important;
     z-index: 5;
     display: block;
     width: 168px;
