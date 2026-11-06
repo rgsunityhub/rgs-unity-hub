@@ -40,7 +40,7 @@ begin
     return new;
   end if;
 
-  perform extensions.http_post(
+  perform net.http_post(
     url := 'https://stdxeimphibosmhkhzvr.supabase.co/functions/v1/send-push',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
