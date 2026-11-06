@@ -623,6 +623,7 @@ a { color: inherit; }
   }
   .community-card {
     display: block;
+    padding: 10px;
   }
   .sidebar-user {
     display: none;
@@ -734,11 +735,11 @@ a { color: inherit; }
   }
   .sidebar-bottom {
     position: fixed;
-    top: 68px;
+    top: 12px;
     left: 12px;
     z-index: 5;
     display: block;
-    width: 180px;
+    width: 168px;
     margin: 0;
   }
   .community-card {
