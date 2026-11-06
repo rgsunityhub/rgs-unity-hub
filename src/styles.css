@@ -644,7 +644,7 @@ a { color: inherit; }
     align-items: center;
     justify-content: flex-end;
     gap: 3px;
-    padding-right: 190px;
+    padding-right: 270px;
   }
   .sidebar-bottom {
     position: fixed;
@@ -674,7 +674,16 @@ a { color: inherit; }
     font-size: 9px;
   }
   .sidebar-user {
-    display: none;
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    z-index: 9;
+    width: 260px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 2px;
+    border-top: 0;
   }
   .nav-link {
     width: auto;
@@ -706,6 +715,9 @@ a { color: inherit; }
     background: transparent;
     backdrop-filter: none;
     padding: 0;
+  }
+  .topbar-actions {
+    display: none;
   }
   .topbar .breadcrumb,
   .topbar .online-indicator {
