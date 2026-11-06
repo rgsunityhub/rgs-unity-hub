@@ -172,9 +172,26 @@ Project Android native dibuat dengan Capacitor dan membuka build React lokal di 
 3. Di Android Studio pilih **Build → Build Bundle(s) / APK(s) → Build APK(s)**. APK debug tersedia di `android/app/build/outputs/apk/debug/app-debug.apk`; pindahkan file tersebut ke perangkat Android untuk memasangnya.
 4. Untuk distribusi publik/Google Play, buat dan simpan signing key milik pemilik aplikasi, lalu build APK/AAB release bertanda tangan. Jangan commit signing key atau password-nya.
 
-Workflow **Build Android APK** juga membuat APK debug otomatis setelah perubahan terkait masuk ke branch `main`; file dapat diunduh pada bagian **Artifacts** di halaman run GitHub Actions. Pastikan repository memiliki secrets `VITE_SUPABASE_URL` dan `VITE_SUPABASE_ANON_KEY`, sama seperti workflow GitHub Pages.
+### Push notification native Android
 
-Untuk perubahan UI berikutnya, jalankan lagi `npm run android:sync` sebelum membuka atau membangun project Android. Push notification native dan distribusi iOS memerlukan konfigurasi native terpisah; keduanya tidak otomatis disediakan oleh APK ini. Build web/type-check bisa dilakukan dengan `npm run build`.
+Push Android native menggunakan Firebase Cloud Messaging (FCM); layanan Web Push/VAPID browser tetap terpisah.
+
+1. Di Firebase Console, buat/pilih project, aktifkan Firebase Cloud Messaging API, dan daftarkan aplikasi Android dengan package name **`com.rgsunityhub.app`**. Unduh `google-services.json` untuk aplikasi itu.
+2. Encode berkas tersebut sebagai Base64 dan simpan hasilnya sebagai **Actions repository secret** `FIREBASE_GOOGLE_SERVICES_JSON_BASE64` di **Settings → Secrets and variables → Actions**. Di PowerShell, hasil Base64 dapat dibuat tanpa mengubah isi berkas:
+
+   ```powershell
+   [Convert]::ToBase64String([IO.File]::ReadAllBytes(".\google-services.json"))
+   ```
+
+   Jangan commit `google-services.json` atau hasil Base64 ke repository.
+3. Buat service account untuk project Firebase yang sama, beri role **Firebase Cloud Messaging API Admin**, lalu simpan JSON service-account lengkap sebagai Supabase Edge Function secret **`FIREBASE_SERVICE_ACCOUNT_JSON`**. Jangan masukkan private key ke aplikasi, repository, atau Actions log.
+4. Di Supabase Dashboard **Database → Vault**, simpan secret acak kuat dengan nama `rgs_push_trigger_secret`. Terapkan migration berurutan melalui SQL Editor: `20261106193000_add_push_subscriptions.sql`, `20261106210000_add_native_push_tokens.sql`, lalu `20261106211000_secure_push_trigger_secret.sql`. Jika migration pertama sudah diterapkan sebelumnya, jalankan dua migration terakhir untuk mengaktifkan tabel native dan menghapus dependensi pada secret yang tertanam di SQL.
+5. Deploy fungsi `send-push`. Di Supabase Dashboard **Edge Functions → Secrets**, atur `PUSH_TRIGGER_SECRET` dengan nilai yang sama persis seperti Vault secret, serta `FIREBASE_SERVICE_ACCOUNT_JSON` dengan JSON service-account Firebase. Untuk Web Push browser yang sudah ada, pertahankan juga `VAPID_PUBLIC_KEY` dan `VAPID_PRIVATE_KEY`.
+6. Push perubahan ke `main` atau jalankan workflow **Build Android APK**. Jika build dan konfigurasi selesai, unduh artifact `rgs-unity-hub-android-debug`, instal APK terbaru, login, lalu aktifkan push dari **Notifications → Aktifkan** dan izinkan notifikasi Android.
+
+Workflow APK memerlukan repository secrets `FIREBASE_GOOGLE_SERVICES_JSON_BASE64`, `VITE_SUPABASE_URL`, dan `VITE_SUPABASE_ANON_KEY`. Push notification baru aktif setelah konfigurasi Firebase, migration database, Edge Function, dan APK berkonfigurasi Firebase tersedia. Secret akun Firebase hanya untuk server-side; file konfigurasi Android hanya berisi identitas aplikasi Firebase publik.
+
+Untuk perubahan UI berikutnya, jalankan lagi `npm run android:sync` sebelum membuka atau membangun project Android. Push native Android disertakan pada project ini setelah prasyarat di atas dikonfigurasi; distribusi iOS masih memerlukan konfigurasi native terpisah. Build web/type-check bisa dilakukan dengan `npm run build`.
 
 ## Deploy ke GitHub Pages
 

@@ -2,5 +2,10 @@ node_modules
 dist
 .env
 .env.local
+android/app/google-services.json
+/google-services.json
+/rgs-unity-hub-2026-75fe27cbbbad.json
+/rgs-unity-hub-2026-354ef88706b2.json
+/supabase/.temp/
 .vercel
 .DS_Store

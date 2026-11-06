@@ -2,3 +2,6 @@ project_id = "stdxeimphibosmhkhzvr"
 
 [functions.login-with-nickname]
 verify_jwt = false
+
+[functions.send-push]
+verify_jwt = false

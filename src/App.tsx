@@ -6,7 +6,12 @@ import {
   Trash2, Users, Volume2, VolumeX, X, Youtube, type LucideIcon,
 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
+import { PushNotifications } from "@capacitor/push-notifications";
 import { isSupabaseConfigured, supabase } from "./lib/supabase";
+import {
+  disablePushNotifications, enablePushNotifications, getPushStatus,
+  initializeNativePushListeners, removeNativePushTokenForCurrentUser,
+} from "./lib/push";
 import InstallAppButton from "./components/InstallAppButton";
 import type { Page, Profile, Publication, Role } from "./lib/types";
 
@@ -104,6 +109,31 @@ function App() {
   const [recoveryPending, setRecoveryPending] = useState(window.location.hash.includes("type=recovery"));
 
   useEffect(() => {
+    if (Capacitor.getPlatform() !== "android") return;
+    let active = true;
+    let actionListener: { remove: () => Promise<void> } | undefined;
+    void PushNotifications.addListener("pushNotificationActionPerformed", () => {
+      if (active) setPage("notifications");
+    }).then((listener) => {
+      if (active) actionListener = listener;
+      else void listener.remove();
+    }).catch((listenerError: unknown) => {
+      if (active) setError(friendlyError(listenerError));
+    });
+    return () => {
+      active = false;
+      void actionListener?.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!session || Capacitor.getPlatform() !== "android") return;
+    void initializeNativePushListeners().catch((listenerError: unknown) => {
+      setError(friendlyError(listenerError));
+    });
+  }, [session?.user?.id]);
+
+  useEffect(() => {
     if (!supabase) return;
     let active = true;
     supabase.auth.getSession().then(({ data, error: authError }) => {
@@ -131,6 +161,12 @@ function App() {
 
   const signOut = async () => {
     if (!supabase) return;
+    try {
+      await removeNativePushTokenForCurrentUser();
+    } catch (pushError) {
+      setError(friendlyError(pushError));
+      return;
+    }
     const { error: authError } = await supabase.auth.signOut();
     if (authError) setError(authError.message);
     else { setSession(null); setProfile(null); }
@@ -977,12 +1013,17 @@ function InvitesPage({ profile, setError }: { profile: Profile; setError: (messa
 
 function NotificationsPage({ setError }: { setError: (message: string) => void }) {
   const [notifications, setNotifications] = useState<Array<{ id: string; title: string; body: string; created_at: string; read_at: string | null }>>([]);
+  const [pushStatus, setPushStatus] = useState<"unsupported" | "enabled" | "disabled" | "denied">("disabled");
+  const [pushBusy, setPushBusy] = useState(false);
   const load = useCallback(async () => {
     if (!supabase) return;
     const { data, error } = await supabase.from("notifications").select("id, title, body, created_at, read_at").order("created_at", { ascending: false }).limit(50);
     if (error) setError(error.message); else setNotifications(data ?? []);
   }, [setError]);
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+    void getPushStatus().then(setPushStatus).catch((statusError: unknown) => setError(friendlyError(statusError)));
+  }, [load, setError]);
   useRealtimeRefresh("rgs-notifications", NOTIFICATION_TABLE, load, undefined, setError);
   const markRead = async (id: string) => {
     if (!supabase) return;
@@ -996,8 +1037,30 @@ function NotificationsPage({ setError }: { setError: (message: string) => void }
     if (error) setError(error.message);
     else setNotifications((current) => current.filter((item) => item.id !== id));
   };
+  const togglePush = async () => {
+    setPushBusy(true);
+    try {
+      if (pushStatus === "enabled") await disablePushNotifications();
+      else await enablePushNotifications();
+      setPushStatus(await getPushStatus());
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Gagal mengaktifkan push notification.");
+    } finally {
+      setPushBusy(false);
+    }
+  };
   return <>
     <PageHeading eyebrow="STAY IN THE LOOP" title={<>Notifications<span className="title-dot">.</span></>} subtitle="Pemberitahuan penting dari aktivitas komunitas." />
+    <section className="settings-card push-settings-card">
+      <div className="settings-icon"><Bell size={19} /></div>
+      <div>
+        <strong>{Capacitor.getPlatform() === "android" ? "Push notification aplikasi Android ini" : "Push notification perangkat ini"}</strong>
+        <p>{pushStatus === "enabled" ? "Aktif. Notifikasi dapat diterima meskipun aplikasi ditutup." : pushStatus === "denied" ? "Izin notifikasi diblokir. Aktifkan izin aplikasi di pengaturan Android." : pushStatus === "unsupported" ? "Platform ini belum mendukung push notification native." : "Aktifkan agar pemberitahuan komunitas muncul meskipun aplikasi ditutup."}</p>
+      </div>
+      <button className={`button ${pushStatus === "enabled" ? "button-outline" : "button-primary"}`} type="button" onClick={() => void togglePush()} disabled={pushBusy || pushStatus === "unsupported" || pushStatus === "denied"}>
+        {pushBusy ? "Memproses..." : pushStatus === "enabled" ? "Nonaktifkan" : "Aktifkan"}
+      </button>
+    </section>
     <div className="notification-list">{notifications.map((item) => <article className={`notification-row ${item.read_at ? "" : "unread"}`} key={item.id}><div className="notification-icon"><Bell size={17} /></div><div><strong>{item.title}</strong><p>{item.body}</p><time>{dateLabel(item.created_at)}</time></div><div className="notification-actions">{!item.read_at && <button className="text-button" onClick={() => void markRead(item.id)}>Tandai dibaca</button>}<button className="icon-button notification-delete" type="button" onClick={() => void deleteNotification(item.id)} aria-label={`Hapus notifikasi ${item.title}`} title="Hapus notifikasi"><Trash2 size={16} /></button></div></article>)}</div>
     {!notifications.length && <EmptyState title="Semua tenang di sini" body="Notifikasi komunitas akan muncul di halaman ini." />}
   </>;
