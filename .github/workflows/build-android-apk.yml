@@ -18,7 +18,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -71,6 +71,9 @@ jobs:
         working-directory: android
         run: bash ./gradlew assembleDebug
 
+      - name: Prepare release APK
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk rgs-unity-hub.apk
+
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
@@ -78,3 +81,16 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish latest APK download
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-build-${{ github.run_number }}
+          name: Android APK build ${{ github.run_number }}
+          body: |
+            APK Android terbaru untuk RGS Unity Hub.
+
+            Unduh `rgs-unity-hub.apk`, lalu buka file tersebut di perangkat Android untuk memasang atau memperbarui aplikasi.
+          files: rgs-unity-hub.apk
+          make_latest: true
+          fail_on_unmatched_files: true

@@ -37,7 +37,7 @@ export default function InstallAppButton() {
     };
   }, []);
 
-  if (nativeApp || installed) return null;
+  if (nativeApp) return null;
 
   const install = async () => {
     if (!installPrompt) {
@@ -59,10 +59,22 @@ export default function InstallAppButton() {
 
   return (
     <div className="install-app">
-      <button className="button button-outline install-app-button" type="button" onClick={() => void install()} aria-label="Pasang aplikasi" title="Pasang aplikasi">
+      {!installed && (
+        <button className="button button-outline install-app-button" type="button" onClick={() => void install()} aria-label="Pasang aplikasi" title="Pasang aplikasi">
+          <Download size={15} />
+          <span>Pasang aplikasi</span>
+        </button>
+      )}
+      <a
+        className="button button-outline android-apk-button"
+        href="https://github.com/rgsunityhub/rgsunityhub.github.io/releases/latest/download/rgs-unity-hub.apk"
+        download
+        aria-label="Unduh APK Android"
+        title="Unduh APK Android"
+      >
         <Download size={15} />
-        <span>Pasang aplikasi</span>
-      </button>
+        <span>Unduh APK Android</span>
+      </a>
       {help && <p className="install-app-help" role="status">{help}</p>}
     </div>
   );
