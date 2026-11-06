@@ -892,6 +892,11 @@ a { color: inherit; }
     display: block;
     min-height: 58px;
   }
+  .community-card::after {
+    right: -10px;
+    top: -14px;
+    width: 72px;
+  }
   .mobile-community-card .community-notification-button {
     display: none;
   }
