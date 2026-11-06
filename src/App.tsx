@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import {
   ArrowDownToLine, ArrowUpRight, Bell, Check, CircleHelp, Copy, Expand, File, FileArchive, FileImage,
   FileText, Film, Folder, Globe2, Home, KeyRound, LayoutDashboard, Link2, LockKeyhole, LogOut,
-  Menu, MessageCircle, MoreHorizontal, Plus, Search, Send, Settings, Shield, Sparkles, Upload,
+  Menu, MessageCircle, MoreHorizontal, Plus, Search, Send, Settings, Shield, Sparkles, Image as ImageIcon, Upload,
   Trash2, Users, Volume2, VolumeX, X, Youtube, type LucideIcon,
 } from "lucide-react";
 import { isSupabaseConfigured, supabase } from "./lib/supabase";
@@ -869,9 +869,25 @@ function ProfilePage({ profile, viewedProfileId, setProfile, setError }: { profi
     const { data: updated, error } = await supabase.from("profiles").update({ avatar_url: data.publicUrl }).eq("id", profile.id).select("*").single();
     if (error) setError(error.message); else setProfile(updated as Profile);
   };
+  const coverUpload = async (event: FormEvent<HTMLInputElement>) => {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!supabase || !file) return;
+    if (!["image/png", "image/jpeg", "image/gif", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024) { setError("Thumbnail harus berupa PNG, JPEG, GIF, atau WebP dan maksimal 5 MB."); return; }
+    const path = `${profile.id}/cover-${Date.now()}`;
+    const { error: uploadError } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+    if (uploadError) { setError(uploadError.message); return; }
+    const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+    const { data: updated, error } = await supabase.from("profiles").update({ cover_url: data.publicUrl }).eq("id", profile.id).select("*").single();
+    if (error) setError(error.message);
+    else {
+      const nextProfile = updated as Profile;
+      setDisplayedProfile(nextProfile);
+      setProfile(nextProfile);
+    }
+  };
   return <>
     <PageHeading eyebrow={isOwnProfile ? "YOUR IDENTITY" : "MEMBER PROFILE"} title={isOwnProfile ? <>Profil saya<span className="title-dot">.</span></> : <>Profil member<span className="title-dot">.</span></>} subtitle={isOwnProfile ? "Atur identitas yang terlihat oleh komunitas." : "Identitas member dari data komunitas RGS."} />
-    <section className="profile-card"><div className="profile-cover"><div className="cover-mark" /></div><div className="profile-main">{isOwnProfile ? <label className="profile-avatar-upload"><Avatar profile={displayedProfile} large /><input type="file" accept="image/*" onChange={(event) => void avatarUpload(event as unknown as FormEvent<HTMLInputElement>)} /><span><Upload size={14} /></span></label> : <Avatar profile={displayedProfile} large />}<div className="profile-info"><h2>{displayedProfile.nickname}</h2><RoleBadge role={displayedProfile.role} /><p>{displayedProfile.bio || "Belum ada bio. Ceritakan sedikit tentang dirimu."}</p><div className="profile-meta"><span>Member sejak {dateLabel(displayedProfile.created_at)}</span><span><Sparkles size={14} /> {publications} publikasi</span></div></div></div>{isOwnProfile && <form className="profile-edit" onSubmit={save}><label className="field"><span>Bio</span><textarea value={bio} onChange={(event) => setBio(event.target.value)} maxLength={240} rows={3} placeholder="Ceritakan tentang dirimu..." /></label><div className="profile-edit-footer"><span>{bio.length}/240 karakter · Nickname dikelola admin</span><button className="button button-primary" disabled={saving}><Check size={16} />{saving ? "Menyimpan..." : "Simpan profil"}</button></div></form>}</section>
+    <section className="profile-card"><div className={`profile-cover${displayedProfile.cover_url ? " has-cover" : ""}`} style={displayedProfile.cover_url ? { backgroundImage: `linear-gradient(90deg, rgba(10,10,12,.12), rgba(10,10,12,.5)), url("${displayedProfile.cover_url}")` } : undefined}><div className="cover-mark" />{isOwnProfile && <label className="cover-upload-button" title="Ganti thumbnail profil"><input type="file" accept="image/png,image/jpeg,image/gif,image/webp" onChange={(event) => void coverUpload(event as unknown as FormEvent<HTMLInputElement>)} /><ImageIcon size={15} /> Ganti thumbnail</label>}</div><div className="profile-main">{isOwnProfile ? <label className="profile-avatar-upload"><Avatar profile={displayedProfile} large /><input type="file" accept="image/*" onChange={(event) => void avatarUpload(event as unknown as FormEvent<HTMLInputElement>)} /><span><Upload size={14} /></span></label> : <Avatar profile={displayedProfile} large />}<div className="profile-info"><h2>{displayedProfile.nickname}</h2><RoleBadge role={displayedProfile.role} /><p>{displayedProfile.bio || "Belum ada bio. Ceritakan sedikit tentang dirimu."}</p><div className="profile-meta"><span>Member sejak {dateLabel(displayedProfile.created_at)}</span><span><Sparkles size={14} /> {publications} publikasi</span></div></div></div>{isOwnProfile && <form className="profile-edit" onSubmit={save}><label className="field"><span>Bio</span><textarea value={bio} onChange={(event) => setBio(event.target.value)} maxLength={240} rows={3} placeholder="Ceritakan tentang dirimu..." /></label><div className="profile-edit-footer"><span>{bio.length}/240 karakter · Nickname dikelola admin</span><button className="button button-primary" disabled={saving}><Check size={16} />{saving ? "Menyimpan..." : "Simpan profil"}</button></div></form>}</section>
   </>;
 }
 
@@ -971,6 +987,7 @@ function MemberProfileModal({ memberId, onClose, setError }: { memberId: string;
   return <div className="modal-backdrop" onClick={onClose}>
     <section className="member-modal member-profile-modal" role="dialog" aria-modal="true" aria-label={`Profil ${member.nickname}`} onClick={(event) => event.stopPropagation()}>
       <button className="modal-close icon-button" onClick={onClose} aria-label="Tutup"><X size={18} /></button>
+      {member.cover_url && <div className="member-profile-cover" style={{ backgroundImage: `url("${member.cover_url}")` }} />}
       <div className="modal-avatar"><Avatar profile={member} large /></div>
       <h2>{member.nickname}</h2>
       <RoleBadge role={member.role} />

@@ -5,6 +5,7 @@ export interface Profile {
   id: string;
   nickname: string;
   avatar_url: string | null;
+  cover_url: string | null;
   bio: string;
   role: Role;
   created_at: string;

@@ -8,6 +8,7 @@ create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   nickname text not null check (char_length(nickname) between 3 and 24),
   avatar_url text,
+  cover_url text,
   bio text not null default '' check (char_length(bio) <= 240),
   role public.member_role not null default 'user',
   created_at timestamptz not null default now()
